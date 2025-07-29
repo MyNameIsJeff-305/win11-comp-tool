@@ -13,9 +13,9 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await User.bulkCreate([
       {
-        firstName: 'SMART',
-        lastName: 'Solutions',
-        username: 'SMART Solutions',
+        email: 'smart@solutions.com',
+        stationName: 'FD-1',
+        clientName: 'SMART Solutions',
         hashedPassword: bcrypt.hashSync('Smart0502!', 10),
         createdAt: new Date(),
         updatedAt: new Date()

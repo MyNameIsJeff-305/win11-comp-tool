@@ -1,33 +1,31 @@
 'use strict';
 
-const { Reports } = require('../models');
-
 let options = {};
 if (process.env.NODE_ENV === 'production') {
-  options.schema = process.env.SCHEMA;  // define your schema in options object
+  options.schema = process.env.SCHEMA;
 }
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
-    await Reports.bulkCreate([
+  async up(queryInterface, Sequelize) {
+    await queryInterface.bulkInsert('Reports', [
       {
-        reportURL: 'https://example.com/report1',
+        machineCode: 'ABC123',
+        cpu: 'Intel Core i7',
+        ram: '16GB',
+        storage: '512GB SSD',
+        tpm: '2.0',
+        secureBoot: 'Enabled',
+        compatible: 'Yes',
+        issues: null,
+        pdfPath: null,
+        userId: 1
       },
-      {
-        reportURL: 'https://example.com/report2',
-      },
-      {
-        reportURL: 'https://example.com/report3',
-      }
     ], options);
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     options.tableName = 'Reports';
-    const Op = Sequelize.Op;
-    return queryInterface.bulkDelete(options, {
-      reportURL: { [Op.in]: ['https://example.com/report1', 'https://example.com/report2', 'https://example.com/report3'] }
-    }, {});
+    await queryInterface.bulkDelete(options, null, {});
   }
 };

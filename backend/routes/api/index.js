@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const sessionRouter = require('./session.js');
 const usersRouter = require('./users.js');
+const win11checkRouter = require('./win11check.js');
+const tokenAuthRouter = require('./token-auth.js');
 const { restoreUser } = require("../../utils/auth.js");
 
 // Connect restoreUser middleware to the API router
@@ -12,8 +14,24 @@ router.use('/session', sessionRouter);
 
 router.use('/users', usersRouter);
 
+router.use('/win11check', win11checkRouter);
+
+router.use('/token-auth', tokenAuthRouter);
+
 router.post('/test', (req, res) => {
     res.json({ requestBody: req.body });
 });
+
+router.post('/win11check', (req, res) => {
+    const { machine_code, hostname, tpm, secure_boot, ram, storage, cpu, compatible, issues } = req.body;
+
+    try {
+        
+    } catch (error) {
+        
+    }
+
+
+})
 
 module.exports = router;
