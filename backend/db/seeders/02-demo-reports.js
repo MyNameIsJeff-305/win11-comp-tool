@@ -13,28 +13,21 @@ module.exports = {
     await Reports.bulkCreate([
       {
         reportURL: 'https://example.com/report1',
-        createdAt: new Date(),
-        updatedAt: new Date()
       },
       {
         reportURL: 'https://example.com/report2',
-        createdAt: new Date(),
-        updatedAt: new Date()
       },
       {
         reportURL: 'https://example.com/report3',
-        createdAt: new Date(),
-        updatedAt: new Date()
       }
     ], options);
   },
 
   async down (queryInterface, Sequelize) {
-    /**
-     * Add commands to revert seed here.
-     *
-     * Example:
-     * await queryInterface.bulkDelete('People', null, {});
-     */
+    options.tableName = 'Reports';
+    const Op = Sequelize.Op;
+    return queryInterface.bulkDelete(options, {
+      reportURL: { [Op.in]: ['https://example.com/report1', 'https://example.com/report2', 'https://example.com/report3'] }
+    }, {});
   }
 };
