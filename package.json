@@ -14,6 +14,14 @@
     "sequelize": "^6.37.7",
     "sequelize-cli": "^6.6.3"
   },
+  "scripts": {
+    "install": "npm --prefix backend install backend",
+    "dev:backend": "npm install --prefix backend start",
+    "sequelize": "npm run --prefix backend sequelize",
+    "sequelize-cli": "npm run --prefix backend sequelize-cli",
+    "start": "npm start --prefix backend",
+    "build": "npm run --prefix backend build"
+  },
   "devDependencies": {
     "dotenv-cli": "^9.0.0",
     "nodemon": "^3.1.10",

@@ -10,21 +10,31 @@ const { handleValidationErrors } = require('../../utils/validation');
 
 const router = express.Router();
 
+const validateLogin = [
+    check('email')
+        .exists({ checkFalsy: true })
+        .notEmpty()
+        .isEmail()
+        .withMessage('Please provide a valid email.'),
+    check('password')
+        .exists({ checkFalsy: true })
+        .withMessage('Please provide a password.'),
+    handleValidationErrors
+];
+
 // Log in
 router.post(
     '/',
-    validateLogin,
     async (req, res, next) => {
-        const { credential, password } = req.body;
+        const { email, password } = req.body;
+
+        console.log('Login attempt:', { email, password });
 
         const user = await User.unscoped().findOne({
             where: {
-                [Op.or]: {
-                    username: credential,
-                    email: credential
-                }
+                email: email
             }
-        });
+        })
 
         if (!user || !bcrypt.compareSync(password, user.hashedPassword.toString())) {
             const err = new Error('Login failed');
@@ -73,18 +83,5 @@ router.get(
         } else return res.json({ user: null });
     }
 );
-
-const validateLogin = [
-    check('credential')
-        .exists({ checkFalsy: true })
-        .notEmpty()
-        .withMessage('Please provide a valid email or username.'),
-    check('password')
-        .exists({ checkFalsy: true })
-        .withMessage('Please provide a password.'),
-    handleValidationErrors
-];
-
-
 
 module.exports = router;
