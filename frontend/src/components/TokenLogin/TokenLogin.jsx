@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { loginThunk, restoreUser } from '../../store/session';
+import { loginThunk } from '../../store/session';
 
 import './TokenLogin.css';
 
@@ -26,6 +26,7 @@ export default function TokenLogin() {
     const [token, setToken] = useState('');
 
     useEffect(() => {
+        setToken(document.cookie.split('; ').find(c => c.startsWith('token=')).split('=')[1] || '');
         const errors = {};
         if (!email) errors.email = 'Email is required';
         if (!password) errors.password = 'Password is required';
