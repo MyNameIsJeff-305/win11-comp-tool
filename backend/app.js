@@ -21,12 +21,16 @@ if (!isProduction) {
     app.use(cors());
 }
 
+app.use(helmet.crossOriginResourcePolicy({
+    policy: "cross-origin"
+}));
+
 app.use(
     csurf({
         cookie: {
             secure: isProduction,
             sameSite: isProduction && "Lax",
-            httpOnly: false
+            httpOnly: true
         }
     })
 );
