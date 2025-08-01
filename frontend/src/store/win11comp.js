@@ -35,7 +35,7 @@ export const getTokenThunk = (id) => async (dispatch) => {
     });
     if (response.ok) {
         const data = await response.json();
-        dispatch(getToken(data.token));
+        dispatch(getToken(data.csrfToken));
     } else {
         throw new Error('Failed to fetch token');
     }

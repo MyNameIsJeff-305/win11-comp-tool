@@ -46,7 +46,7 @@ export default function Home() {
     const downloadTool = async () => {
 
         await dispatch(getTokenThunk(user.id));
-
+        
         // Download the tool located at public/SMART-Win11Check.exe, no need to fetch it
         const link = document.createElement('a');
         link.href = '/SMART-Win11Check.exe';

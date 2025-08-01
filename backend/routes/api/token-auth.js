@@ -13,13 +13,13 @@ router.post('/', async (req, res, next) => {
         return res.status(404).json({ message: 'User not found' });
     }
 
-    const token = jwt.sign(
-        { id: foundUser.id, email: foundUser.email },
-        process.env.JWT_SECRET || 'default_secret',
-        { expiresIn: '30d' }
-    );
+    //Get the _csrf token from the browser's cookies
+    const csrfToken = req.csrfToken();
 
-    res.status(200).json({ token });
+    // console.log("CSRF Token:", csrfToken);
+
+    res.status(200).json({csrfToken})
+
 });
 
 module.exports = router;
