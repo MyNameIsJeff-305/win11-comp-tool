@@ -12,6 +12,8 @@ router.post('/', async (req, res) => {
     const user = req.user;
     const data = req.body;
 
+    console.log("RECEIVED BODY", data);
+
     const report = await Report.create({
         ...data,
         userId: user.id,
