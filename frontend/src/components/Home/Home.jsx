@@ -59,7 +59,7 @@ export default function Home() {
             const blob = new Blob([token], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = '.smart-cookie.txt';
+            a.download = 'smart-cookie.txt';
             a.click();
             a.remove();
         }
