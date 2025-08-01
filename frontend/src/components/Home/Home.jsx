@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import * as sessionActions from '../../store/session';
+import { getTokenThunk } from '../../store/win11comp';
 import './Home.css';
 
 export default function Home() {
     const dispatch = useDispatch();
     const user = useSelector(state => state.session.user);
+    const token = useSelector(state => state.win11comp.token);
 
     const [email, setEmail] = useState('');
     const [stationName, setStationName] = useState('');
@@ -19,6 +21,17 @@ export default function Home() {
         setLoadForm(!user);
     }, [user]);
 
+    const handleLogout = () => {
+        dispatch(sessionActions.logoutThunk());
+        setLoadForm(true);
+        setEmail('');
+        setStationName('');
+        setClientName('');
+        setPassword('');
+        setConfirmPassword('');
+        setErrors({});
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -28,24 +41,30 @@ export default function Home() {
         if (Object.keys(errors).length) return;
 
         await dispatch(sessionActions.signupThunk(email, stationName, clientName, password));
-
-
-        const response = await fetch('/SMART-Win11Check.exe');
-        if (!response.ok) {
-            console.error('Failed to download the tool');
-            return;
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'SMART-Win11Check.exe';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
     };
 
-    console.log(loadForm, "THIS IS LOAD FORM")
+    const downloadTool = async () => {
+
+        await dispatch(getTokenThunk(user.id));
+
+        // Download the tool located at public/SMART-Win11Check.exe, no need to fetch it
+        const link = document.createElement('a');
+        link.href = '/SMART-Win11Check.exe';
+        link.download = 'SMART-Win11Check.exe';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if (token) {
+            const blob = new Blob([token], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = '.smart-cookie.txt';
+            a.click();
+            a.remove();
+        }
+
+    }
 
     return (
         <div className="home-wrapper">
@@ -53,7 +72,7 @@ export default function Home() {
                 <h1>SMART Solutions</h1>
                 <p>Windows 11 Compatibility Tool</p>
                 {user && (
-                    <button className="logout-btn" onClick={() => dispatch(sessionActions.logoutThunk())}>
+                    <button className="logout-btn" onClick={handleLogout}>
                         Cerrar sesión
                     </button>
                 )}
@@ -78,7 +97,7 @@ export default function Home() {
                     <section className="welcome-section">
                         <h2>Welcome, {user.email}</h2>
                         <p>Your report has been emailed to you. You can download the tool again below:</p>
-                        <a className="btn-red" href="/SMART-Win11Check.exe" download>Download Tool</a>
+                        <a className="btn-red" onClick={downloadTool}>Download Tool</a>
                     </section>
                 )}
             </main>

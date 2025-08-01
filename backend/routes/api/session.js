@@ -28,8 +28,6 @@ router.post(
     async (req, res, next) => {
         const { email, password } = req.body;
 
-        console.log('Login attempt:', { email, password });
-
         const user = await User.unscoped().findOne({
             where: {
                 email: email

@@ -2,9 +2,11 @@ import { createStore, applyMiddleware, compose, combineReducers } from 'redux';
 import thunk from 'redux-thunk';
 
 import sessionReducer from './session';
+import win11compReducer from './win11comp';
 
 const rootReducer = combineReducers({
-  session: sessionReducer
+  session: sessionReducer,
+  win11comp: win11compReducer
 });
 
 let enhancer;
