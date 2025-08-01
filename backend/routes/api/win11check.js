@@ -8,7 +8,7 @@ const sendMail = require('../../utils/email');
 
 const router = express.Router();
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', async (req, res) => {
     const user = req.user;
     const data = req.body;
 
