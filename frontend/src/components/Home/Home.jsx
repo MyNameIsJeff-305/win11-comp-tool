@@ -55,14 +55,12 @@ export default function Home() {
         link.click();
         document.body.removeChild(link);
 
-        if (token) {
-            const blob = new Blob([token], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'smart-cookie.txt';
-            a.click();
-            a.remove();
-        }
+        const blob = new Blob([token], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'smart-cookie.txt';
+        a.click();
+        a.remove();
 
     }
 
