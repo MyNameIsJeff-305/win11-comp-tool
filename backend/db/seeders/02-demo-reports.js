@@ -11,6 +11,7 @@ module.exports = {
     await queryInterface.bulkInsert('Reports', [
       {
         machineCode: 'ABC123',
+        hostname: 'DESKTOP-01',
         cpu: 'Intel Core i7',
         ram: '16GB',
         storage: '512GB SSD',
@@ -18,7 +19,6 @@ module.exports = {
         secureBoot: 'Enabled',
         compatible: 'Yes',
         issues: null,
-        pdfPath: null,
         userId: 1
       },
     ], options);

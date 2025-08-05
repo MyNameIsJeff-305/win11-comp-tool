@@ -19,6 +19,10 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
+      hostname: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       cpu: {
         type: Sequelize.STRING,
         allowNull: false
@@ -44,10 +48,6 @@ module.exports = {
         allowNull: false
       },
       issues: {
-        type: Sequelize.STRING,
-        allowNull: true
-      },
-      pdfPath: {
         type: Sequelize.STRING,
         allowNull: true
       },

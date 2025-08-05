@@ -14,16 +14,45 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Report.init({
-    machineCode: DataTypes.STRING,
-    cpu: DataTypes.STRING,
-    ram: DataTypes.STRING,
-    storage: DataTypes.STRING,
-    tpm: DataTypes.STRING,
-    secureBoot: DataTypes.STRING,
-    compatible: DataTypes.STRING,
-    issues: DataTypes.STRING,
-    pdfPath: DataTypes.STRING,
-    userId: DataTypes.INTEGER
+    machineCode: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    hostname: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    cpu: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    ram: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    storage: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    tpm: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    secureBoot: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    compatible: { 
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    issues: { 
+      type: DataTypes.STRING
+    },
+    userId: { 
+      type: DataTypes.INTEGER,
+      allowNull: false
+    }
   }, {
     sequelize,
     modelName: 'Report',
