@@ -1,7 +1,5 @@
 'use strict';
 
-const { Report } = require('../models');
-
 let options = {};
 if (process.env.NODE_ENV === 'production') {
   options.schema = process.env.SCHEMA;
@@ -10,8 +8,7 @@ if (process.env.NODE_ENV === 'production') {
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.bulkInsert(
-      { tableName: 'Reports', schema: options.schema },
+    await queryInterface.bulkInsert('Reports',
       [{
         machineCode: 'ABC123',
         hostname: 'DESKTOP-01',
@@ -23,7 +20,7 @@ module.exports = {
         compatible: 'Yes',
         issues: "No Secure Boot",
         userId: 1
-      },], options);
+      }]);
   },
 
   async down(queryInterface, Sequelize) {
