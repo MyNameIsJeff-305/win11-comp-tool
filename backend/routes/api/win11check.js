@@ -5,7 +5,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { generatePDFBuffer } = require('../../utils/pdf');
 const sendMail = require('../../utils/email');
-const { bcrypt } = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const { singleMulterUpload, singleFileUpload } = require('../../awsS3');
 
 const router = express.Router();
