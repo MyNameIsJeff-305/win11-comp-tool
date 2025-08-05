@@ -6,6 +6,7 @@ const path = require('path');
 const { generatePDFBuffer } = require('../../utils/pdf');
 const sendMail = require('../../utils/email');
 const { bcrypt } = require('bcryptjs');
+const { singleMulterUpload, singleFileUpload } = require('../../awsS3');
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ function generateRandomPassword(length = 10) {
     return password;
 }
 
-router.post('/', async (req, res) => {
+router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     const {email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot} = req.body;
 
 
@@ -48,14 +49,60 @@ router.post('/', async (req, res) => {
         userId: newUser.id,
     });
 
-    const pdfBuffer = await generatePDFBuffer({ machine_code, hostname, status, issues, email: newUser.email });
+    //Create a PDF File and upload it to S3
+    const pdfBuffer = await generatePDFBuffer({
+        email: newUser.email,
+        stationName: newUser.stationName,
+        clientName: newUser.clientName,
+        machineCode: report.machineCode,
+        hostname: report.hostname,
+        cpu: report.cpu,
+        ram: report.ram,
+        storage: report.storage,
+        tpm: report.tpm,
+        secureBoot: report.secureBoot,
+        compatible: report.compatible,
+        issues: report.issues,
+        password: newPassword,
+    });
+    const pdfFileName = `report-${newUser.id}-${Date.now()}.pdf`;
+    const pdfFilePath = path.join(__dirname, '../../uploads', pdfFileName);
 
-    await fs.mkdir('reports', { recursive: true });
-    await fs.writeFile(`reports/${machine_code}.pdf`, pdfBuffer);
-
+    await fs.writeFile(pdfFilePath, pdfBuffer); 
     await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
-    res.json({ success: true });
+    // Send the PDF file to S3
+    singleFileUpload({
+        file: pdfFilePath,
+        fileName: pdfFileName,
+        contentType: 'application/pdf',
+    });
+    
+    // Delete the local PDF file after uploading to S3
+    await fs.unlink(pdfFilePath);
+    
+    res.status(201).json({
+        message: 'Report created successfully',
+        user: {
+            id: newUser.id,
+            email: newUser.email,
+            stationName: newUser.stationName,
+            clientName: newUser.clientName,
+        },
+        report: {
+            id: report.id,
+            machineCode: report.machineCode,
+            hostname: report.hostname,
+            cpu: report.cpu,
+            ram: report.ram,
+            storage: report.storage,
+            tpm: report.tpm,
+            secureBoot: report.secureBoot,
+            compatible: report.compatible,
+            issues: report.issues,
+        },
+        pdfFileName
+    });
 });
 
 module.exports = router;
