@@ -10,7 +10,7 @@ if (process.env.NODE_ENV === 'production') {
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await Report.bulkCreate([
+    await queryInterface.bulkInsert('Reports', [
       {
         machineCode: 'ABC123',
         hostname: 'DESKTOP-01',
