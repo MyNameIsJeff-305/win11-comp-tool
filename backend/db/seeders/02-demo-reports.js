@@ -20,7 +20,7 @@ module.exports = {
         tpm: '2.0',
         secureBoot: 'Enabled',
         compatible: 'Yes',
-        issues: null,
+        issues: "No Secure Boot",
         userId: 1
       },
     ], options);
@@ -28,6 +28,9 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     options.tableName = 'Reports';
-    await queryInterface.bulkDelete(options, null, {});
+    const Op = Sequelize.Op;
+    return queryInterface.bulkDelete(options, {
+      machineCode: { [Op.in]: ['ABC123'] }
+    }, {});
   }
 };
