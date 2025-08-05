@@ -20,7 +20,7 @@ module.exports = {
         compatible: 'Yes',
         issues: "No Secure Boot",
         userId: 1
-      }]);
+      }], options);
   },
 
   async down(queryInterface, Sequelize) {
