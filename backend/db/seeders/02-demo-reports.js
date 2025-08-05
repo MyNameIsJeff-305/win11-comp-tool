@@ -10,8 +10,9 @@ if (process.env.NODE_ENV === 'production') {
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.bulkInsert('Reports', [
-      {
+    await queryInterface.bulkInsert(
+      { tableName: 'Reports', schema: options.schema },
+      [{
         machineCode: 'ABC123',
         hostname: 'DESKTOP-01',
         cpu: 'Intel Core i7',
@@ -22,8 +23,7 @@ module.exports = {
         compatible: 'Yes',
         issues: "No Secure Boot",
         userId: 1
-      },
-    ], options);
+      },], options);
   },
 
   async down(queryInterface, Sequelize) {
