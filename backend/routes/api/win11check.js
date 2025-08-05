@@ -20,29 +20,40 @@ function generateRandomPassword(length = 10) {
 }
 
 router.post('/', async (req, res) => {
-    const data = req.body;
+    const {email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot} = req.body;
+
 
     const newPassword = generateRandomPassword(12);
 
-    const newUser = await User.create({
-        email: data.email,
-        stationName: data.stationName,
-        clientName: data.clientName,
-        hashedPassword: newPassword
-    })
+    const newUser = await User.create(
+        {
+            email,
+            stationName,
+            clientName,
+            hashedPassword: newPassword // Store the hashed password
+        }
+    )
 
     const report = await Report.create({
-        ...data,
+        machineCode: machine_code,
+        hostname,
+        cpu,
+        ram,
+        storage,
+        tpm,
+        secureBoot,
+        compatible: status,
+        issues,
         userId: newUser.id,
-        pdfPath: `reports/${data.machine_code}.pdf`
+        pdfPath: `reports/${machine_code}.pdf`
     });
 
-    const pdfBuffer = await generatePDFBuffer({ ...data, email: newUser.email });
+    const pdfBuffer = await generatePDFBuffer({ machine_code, hostname, status, issues, email: newUser.email });
 
     await fs.mkdir('reports', { recursive: true });
-    await fs.writeFile(`reports/${data.machine_code}.pdf`, pdfBuffer);
+    await fs.writeFile(`reports/${machine_code}.pdf`, pdfBuffer);
 
-    await sendMail(newUser.email, data.machine_code, pdfBuffer, newUser.password);
+    await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
     res.json({ success: true });
 });
