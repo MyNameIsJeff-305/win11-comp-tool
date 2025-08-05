@@ -1,5 +1,7 @@
 'use strict';
 
+import { Report } from '../models';
+
 let options = {};
 if (process.env.NODE_ENV === 'production') {
   options.schema = process.env.SCHEMA;
@@ -8,7 +10,7 @@ if (process.env.NODE_ENV === 'production') {
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.bulkInsert('Reports', [
+    await Report.bulkCreate([
       {
         machineCode: 'ABC123',
         hostname: 'DESKTOP-01',
