@@ -46,7 +46,6 @@ router.post('/', async (req, res) => {
         compatible: status,
         issues,
         userId: newUser.id,
-        pdfPath: `reports/${machine_code}.pdf`
     });
 
     const pdfBuffer = await generatePDFBuffer({ machine_code, hostname, status, issues, email: newUser.email });
