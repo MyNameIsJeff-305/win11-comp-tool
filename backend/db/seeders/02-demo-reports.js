@@ -1,6 +1,6 @@
 'use strict';
 
-import { Report } from '../models';
+const { Report } = require('../models');
 
 let options = {};
 if (process.env.NODE_ENV === 'production') {
