@@ -5,6 +5,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { generatePDFBuffer } = require('../../utils/pdf');
 const sendMail = require('../../utils/email');
+const { bcrypt } = require('bcryptjs');
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.post('/', async (req, res) => {
             email,
             stationName,
             clientName,
-            hashedPassword: newPassword // Store the hashed password
+            hashedPassword: await bcrypt.hash(newPassword, 10) // Store the hashed password
         }
     )
 
