@@ -16,12 +16,11 @@ const loadReport = (report) => ({
 });
 
 //THUNKS
-export const fetchReports = () => async (dispatch) => {
-    const response = await csrfFetch('/api/reports');
-    if (response.ok) {
-        const reports = await response.json();
-        dispatch(loadReports(reports));
-    }
+export const fetchReports = (params = {}) => async (dispatch) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`/api/reports?${query}`);
+    const data = await res.json();
+    dispatch(loadReports(data));
 };
 
 export const fetchReport = (id) => async (dispatch) => {
