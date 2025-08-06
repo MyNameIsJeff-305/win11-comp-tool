@@ -79,11 +79,11 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     await fs.writeFile(pdfFilePath, pdfBuffer);
     await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
-    // Send the PDF file to S3 
-    singleFileUpload({ file: req.file(pdfFilePath), public: true});
+    // // Send the PDF file to S3 
+    // singleFileUpload({ file: req.file(pdfFilePath), public: true});
 
-    // Delete the local PDF file after uploading to S3
-    await fs.unlink(pdfFilePath);
+    // // Delete the local PDF file after uploading to S3
+    // await fs.unlink(pdfFilePath);
 
     res.status(201).json({
         message: 'Report created successfully',
