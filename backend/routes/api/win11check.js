@@ -77,7 +77,8 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     
     // Write the PDF buffer to a local file
     await fs.writeFile(pdfFilePath, pdfBuffer);
-    await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
+
+    // await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
     // // Send the PDF file to S3 
     // singleFileUpload({ file: req.file(pdfFilePath), public: true});
