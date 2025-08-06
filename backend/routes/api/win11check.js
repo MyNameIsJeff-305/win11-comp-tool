@@ -22,7 +22,7 @@ function generateRandomPassword(length = 10) {
 }
 
 router.post('/', singleMulterUpload('pdf'), async (req, res) => {
-    const {email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot} = req.body;
+    const { email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot } = req.body;
 
 
     const newPassword = generateRandomPassword(12);
@@ -49,6 +49,16 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         userId: newUser.id,
     });
 
+    const uploadsDir = path.join(__dirname, '../../uploads');
+
+    // Ensure the uploads directory exists
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    const pdfFileName = `report-${newUser.id}-${Date.now()}.pdf`;
+    const pdfFilePath = path.join(uploadsDir, pdfFileName);
+    await fs.writeFile(pdfFilePath, pdfBuffer);
+
+
     //Create a PDF File and upload it to S3
     const pdfBuffer = await generatePDFBuffer({
         email: newUser.email,
@@ -65,10 +75,8 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         issues: report.issues,
         password: newPassword,
     });
-    const pdfFileName = `report-${newUser.id}-${Date.now()}.pdf`;
-    const pdfFilePath = path.join(__dirname, '../../uploads', pdfFileName);
 
-    await fs.writeFile(pdfFilePath, pdfBuffer); 
+    await fs.writeFile(pdfFilePath, pdfBuffer);
     await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
     // Send the PDF file to S3
@@ -77,10 +85,10 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         fileName: pdfFileName,
         contentType: 'application/pdf',
     });
-    
+
     // Delete the local PDF file after uploading to S3
     await fs.unlink(pdfFilePath);
-    
+
     res.status(201).json({
         message: 'Report created successfully',
         user: {
