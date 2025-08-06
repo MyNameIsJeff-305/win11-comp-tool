@@ -56,9 +56,8 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
 
     const pdfFileName = `report-${newUser.id}-${Date.now()}.pdf`;
     const pdfFilePath = path.join(uploadsDir, pdfFileName);
-    await fs.writeFile(pdfFilePath, pdfBuffer);
-
-
+    
+    
     //Create a PDF File and upload it to S3
     const pdfBuffer = await generatePDFBuffer({
         email: newUser.email,
@@ -75,7 +74,8 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         issues: report.issues,
         password: newPassword,
     });
-
+    
+    // Write the PDF buffer to a local file
     await fs.writeFile(pdfFilePath, pdfBuffer);
     await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
