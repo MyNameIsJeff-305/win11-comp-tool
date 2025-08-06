@@ -36,7 +36,7 @@ function Layout() {
         {
           user ? (
             <>
-              <p>Welcome, {user?.stationName}!</p>
+              <p>Welcome, {user?.email}!</p>
               <button onClick={handleLogout} className="logout-btn">Logout</button>
               <a href='/reports' className="btn-red">View Reports</a>
             </>
