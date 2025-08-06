@@ -46,15 +46,15 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     // Ensure the uploads directory exists
     await fs.mkdir(uploadsDir, { recursive: true });
 
-    const pdfFileName = `report-${newUser.id}-${Date.now()}.pdf`;
+    const pdfFileName = `report-${stationName}-${Date.now()}.pdf`;
     const pdfFilePath = path.join(uploadsDir, pdfFileName);
     
     
     //Create a PDF File and upload it to S3
     const pdfBuffer = await generatePDFBuffer({
-        email: newUser.email,
-        stationName: newUser.stationName,
-        clientName: newUser.clientName,
+        email: email,
+        stationName: stationName,
+        clientName: clientName,
         machineCode: report.machineCode,
         hostname: report.hostname,
         cpu: report.cpu,
