@@ -24,6 +24,7 @@ export default function Reports() {
                                     <th>Created At</th>
                                     <th>Machine Code</th>
                                     <th>Hostname</th>
+                                    <th>Client</th>
                                     <th>Compatible</th>
                                 </tr>
                             </thead>
@@ -33,6 +34,7 @@ export default function Reports() {
                                         <td>{new Date(report.createdAt).toLocaleString()}</td>
                                         <td>{report.machineCode}</td>
                                         <td>{report.hostname}</td>
+                                        <td>{report.client}</td>
                                         <td className={report.compatible === 'Yes' ? 'yes' : 'no'}>
                                             {report.compatible}
                                         </td>

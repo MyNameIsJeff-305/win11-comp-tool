@@ -23,6 +23,18 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
+      client: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      email: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      stationName: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       cpu: {
         type: Sequelize.STRING,
         allowNull: false

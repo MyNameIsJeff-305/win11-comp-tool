@@ -15,6 +15,9 @@ module.exports = {
       {
         machineCode: 'ABC123',
         hostname: 'DESKTOP-01',
+        client: "CG Smile",
+        email: 'cgsmile@example.com',
+        stationName: 'CG Smile Station',
         cpu: 'Intel Core i7',
         ram: '16GB',
         storage: '512GB SSD',
@@ -27,6 +30,9 @@ module.exports = {
       {
         machineCode: 'XYZ456',
         hostname: 'LAPTOP-02',
+        client: "SMART Solutions",
+        email: 'smartsolutions@example.com',
+        stationName: 'SMART Solutions Station',
         cpu: 'AMD Ryzen 5',
         ram: '8GB',
         storage: '256GB SSD',

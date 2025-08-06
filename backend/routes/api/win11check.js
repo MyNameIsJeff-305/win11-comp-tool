@@ -11,34 +11,27 @@ const { singleMulterUpload, singleFileUpload } = require('../../awsS3');
 const router = express.Router();
 
 //function to create a random password
-function generateRandomPassword(length = 10) {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * charset.length);
-        password += charset[randomIndex];
-    }
-    return password;
-}
+// function generateRandomPassword(length = 10) {
+//     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+//     let password = '';
+//     for (let i = 0; i < length; i++) {
+//         const randomIndex = Math.floor(Math.random() * charset.length);
+//         password += charset[randomIndex];
+//     }
+//     return password;
+// }
 
 router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     const { email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot } = req.body;
 
-
     const newPassword = generateRandomPassword(12);
-
-    const newUser = await User.create(
-        {
-            email,
-            stationName,
-            clientName,
-            hashedPassword: await bcrypt.hash(newPassword, 10) // Store the hashed password
-        }
-    )
 
     const report = await Report.create({
         machineCode: machine_code,
+        email,
+        stationName,
         hostname,
+        client: clientName,
         cpu,
         ram,
         storage,
