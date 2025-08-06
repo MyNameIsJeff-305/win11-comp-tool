@@ -24,8 +24,7 @@ module.exports = {
         tpm: '1.0',
         secureBoot: 'Enabled',
         compatible: 'Yes',
-        issues: "TPM not updated",
-        userId: 1
+        issues: "TPM not updated"
       },
       {
         machineCode: 'XYZ456',
@@ -39,8 +38,7 @@ module.exports = {
         tpm: '2.0',
         secureBoot: 'Disabled',
         compatible: 'No',
-        issues: "Secure Boot not enabled",
-        userId: 1
+        issues: "Secure Boot not enabled"
       }
     ], options);
   },

@@ -24,7 +24,7 @@ const router = express.Router();
 router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     const { email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot } = req.body;
 
-    const newPassword = generateRandomPassword(12);
+    // const newPassword = generateRandomPassword(12);
 
     const report = await Report.create({
         machineCode: machine_code,
@@ -38,8 +38,7 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         tpm,
         secureBoot,
         compatible: status,
-        issues,
-        userId: newUser.id,
+        issues
     });
 
     const uploadsDir = path.join(__dirname, '../../uploads');
@@ -65,7 +64,6 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         secureBoot: report.secureBoot,
         compatible: report.compatible,
         issues: report.issues,
-        password: newPassword,
     });
     
     // Write the PDF buffer to a local file
@@ -81,12 +79,6 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
 
     res.status(201).json({
         message: 'Report created successfully',
-        user: {
-            id: newUser.id,
-            email: newUser.email,
-            stationName: newUser.stationName,
-            clientName: newUser.clientName,
-        },
         report: {
             id: report.id,
             machineCode: report.machineCode,
