@@ -79,19 +79,8 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
     await fs.writeFile(pdfFilePath, pdfBuffer);
     await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
-    // Send the PDF file to S3
-    singleFileUpload({
-        file: {
-            originalname: pdfFileName,
-            buffer: pdfBuffer
-        },
-        public: true // Set to true if you want the file to be publicly accessible
-    }).then((s3FileUrl) => {
-        console.log(`PDF uploaded to S3: ${s3FileUrl}`);
-    }).catch((error) => {
-        console.error('Error uploading PDF to S3:', error);
-        throw error;
-    });
+    // Send the PDF file to S3 
+    singleFileUpload({ file: req.file(pdfFilePath), public: true});
 
     // Delete the local PDF file after uploading to S3
     await fs.unlink(pdfFilePath);
