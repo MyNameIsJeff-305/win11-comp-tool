@@ -1,22 +1,18 @@
 import { csrfFetch } from './csrf';
 
 //Constants
-const SET_USER = 'session/setUser';
-const LOG_IN = 'session/logIn';
+const SET_USER = "session/setUser";
 const LOG_OUT = 'session/logOut';
 const CREATE_USER = 'session/createUser';
 const RESTORE_USER = 'session/restoreUser';
 
 // Action Creators
-const setUser = (user) => ({
-    type: SET_USER,
-    payload: user
-});
-
-const logIn = (user) => ({
-    type: LOG_IN,
-    payload: user
-});
+const setUser = (user) => {
+    return {
+        type: SET_USER,
+        payload: user
+    };
+};
 
 const logOut = () => ({
     type: LOG_OUT
@@ -45,15 +41,20 @@ export const signupThunk = (email, stationName, clientName, password) => async (
     return response;
 };
 
-export const loginThunk = (email, password) => async (dispatch) => {
-    const response = await csrfFetch('/api/session', {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
+export const loginThunk = (user) => async (dispatch) => {
+    console.log(user, "THIS IS USER");
+    const { email, password } = user;
+    const response = await csrfFetch("/api/session", {
+        method: "POST",
+        body: JSON.stringify({
+            email,
+            password
+        })
     });
     const data = await response.json();
-    dispatch(logIn(data.user));
-    return response;
-}
+    dispatch(setUser(data.user));
+    return data.user;
+};
 
 export const logoutThunk = () => async (dispatch) => {
     const response = await csrfFetch('/api/session', {
@@ -65,12 +66,9 @@ export const logoutThunk = () => async (dispatch) => {
 
 //Reducer
 const initialState = { user: null };
-
 const sessionReducer = (state = initialState, action) => {
     switch (action.type) {
         case SET_USER:
-            return { ...state, user: action.payload };
-        case LOG_IN:
             return { ...state, user: action.payload };
         case LOG_OUT:
             return { ...state, user: null };

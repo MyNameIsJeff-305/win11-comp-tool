@@ -3,10 +3,12 @@ import thunk from 'redux-thunk';
 
 import sessionReducer from './session';
 import win11compReducer from './win11comp';
+import reportsReducer from './reports'; // Assuming you have a reports reducer
 
 const rootReducer = combineReducers({
   session: sessionReducer,
-  win11comp: win11compReducer
+  win11comp: win11compReducer,
+  reports: reportsReducer
 });
 
 let enhancer;
