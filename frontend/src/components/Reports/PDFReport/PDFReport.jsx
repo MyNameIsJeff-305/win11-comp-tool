@@ -18,7 +18,7 @@ Font.register({
 });
 
 //Background image
-const backgroundImage = './public/watermark-pdf.jpg'
+const backgroundImage = 'https://win11comptool.s3.us-east-1.amazonaws.com/watermark-pdf.jpg';
 
 const styles = StyleSheet.create({
     page: {
