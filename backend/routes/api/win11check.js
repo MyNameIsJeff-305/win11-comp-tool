@@ -92,7 +92,6 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
             compatible: report.compatible,
             issues: report.issues,
         },
-        pdfFileName
     });
 });
 
