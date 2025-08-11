@@ -1,52 +1,61 @@
 const express = require('express');
 const { Op } = require('sequelize');
-const { Report } = require('../../db/models');
+const { Report, sequelize } = require('../../db/models');  // Adjust if needed
 
 const router = express.Router();
 
-// GET /api/reports?limit=10&page=1&search=...&compatible=yes
 router.get('/', async (req, res) => {
-
-    const { client, compatible, createdAt } = req.query;
-
-    const page = parseInt(req.query.page) || null;
-    const size = parseInt(req.query.size) || null;
-
-    const where = {};
-
-    if (client) {
-        where.client = client;
-    }
-    if (compatible) {
-        where.compatible = compatible;
-    }
-    if (createdAt) {
-        where.createdAt = {
-            [Op.gte]: new Date(createdAt)
-        };
-    }
-
-    const reports = await Report.findAll({
-        where,
-        limit: size,
-        offset: (page - 1) * size
-    });
-
-    return res.json(reports);
-});
-
-//Get A Report by ID
-router.get('/:id', async (req, res) => {
-    const { id } = req.params;
     try {
-        const report = await Report.findByPk(id);
-        if (!report) {
-            return res.status(404).json({ error: "Report not found" });
+        const { search, compatible, createdAt } = req.query;
+
+        let page = parseInt(req.query.page, 10);
+        let size = parseInt(req.query.size, 10);
+
+        if (!page || page < 1) page = 1;
+        if (!size || size < 1) size = 10;
+
+        // Decide which LIKE operator to use
+        const likeOperator = sequelize.getDialect() === 'postgres' ? Op.iLike : Op.like;
+
+        const where = {};
+
+        if (search) {
+            where[Op.or] = [
+                { client: { [likeOperator]: `%${search}%` } },
+                { stationName: { [likeOperator]: `%${search}%` } },
+                { hostname: { [likeOperator]: `%${search}%` } },
+                { machineCode: { [likeOperator]: `%${search}%` } },
+                { publicIP: { [likeOperator]: `%${search}%` } },
+                { email: { [likeOperator]: `%${search}%` } }
+            ];
         }
-        return res.json(report);
+
+        if (compatible !== undefined) {
+            if (compatible.toLowerCase() === 'yes') {
+                where.compatible = 'Yes';
+            } else if (compatible.toLowerCase() === 'no') {
+                where.compatible = 'No';
+            }
+        }
+
+        if (createdAt) {
+            const date = new Date(createdAt);
+            if (!isNaN(date)) {
+                where.createdAt = { [Op.gte]: date };
+            }
+        }
+
+        const reports = await Report.findAll({
+            where,
+            limit: size,
+            offset: (page - 1) * size,
+            order: [['createdAt', 'DESC']]
+        });
+
+        return res.json(reports);
     } catch (error) {
-        console.error("Error fetching report:", error);
-        return res.status(500).json({ error: "Internal server error" });
+        console.error('Error fetching reports:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 });
 

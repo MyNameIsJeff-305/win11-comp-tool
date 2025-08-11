@@ -142,10 +142,10 @@ const ReportsPDF = ({ r }) => (
 
             <View style={styles.tableHeader}>
                 <Text style={styles.cell}>CPU</Text>
-                <Text style={styles.cell}>RAM</Text>
-                <Text style={styles.cell}>Storage</Text>
-                <Text style={styles.cell}>TPM</Text>
-                <Text style={styles.cell}>Secure Boot</Text>
+                <Text style={[styles.cell]}>RAM</Text>
+                <Text style={[styles.cell]}>Storage</Text>
+                <Text style={[styles.cell]}>TPM</Text>
+                <Text style={[styles.cell]}>Secure Boot</Text>
             </View>
 
             <View style={styles.row}>

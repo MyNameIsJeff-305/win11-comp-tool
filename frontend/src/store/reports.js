@@ -22,8 +22,8 @@ const getReport = (report) => ({
 });
 
 //THUNKS
-export const getAllReportsThunk = (page, size) => async (dispatch) => {
-    const response = await csrfFetch(`/api/reports?size=${size}&page=${page}`);
+export const getAllReportsThunk = (page, size, search, compatibility) => async (dispatch) => {
+    const response = await csrfFetch(`/api/reports?size=${size}&page=${page}&search=${search}&compatible=${compatibility}`);
     const reports = await response.json();
     dispatch(getAllReports(reports));
 };
