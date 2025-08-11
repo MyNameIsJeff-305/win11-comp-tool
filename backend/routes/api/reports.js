@@ -6,37 +6,33 @@ const router = express.Router();
 
 // GET /api/reports?limit=10&page=1&search=...&compatible=yes
 router.get('/', async (req, res) => {
-    try {
-        const { client, compatible, createdAt } = req.query;
 
-        const page = parseInt(req.query.page) || null;
-        const size = parseInt(req.query.size) || null;
+    const { client, compatible, createdAt } = req.query;
 
-        const where = {};
+    const page = parseInt(req.query.page) || null;
+    const size = parseInt(req.query.size) || null;
 
-        if(client) {
-            where.client = client;
-        }
-        if(compatible) {
-            where.compatible = compatible;
-        }
-        if(createdAt) {
-            where.createdAt = {
-                [Op.gte]: new Date(createdAt)
-            };
-        }
+    const where = {};
 
-        const reports = await Report.findAll({
-            where,
-            limit: size,
-            offset: (page - 1) * size
-        });
-
-        return res.json(reports);
-
-    } catch (error) {
-        next(error);
+    if (client) {
+        where.client = client;
     }
+    if (compatible) {
+        where.compatible = compatible;
+    }
+    if (createdAt) {
+        where.createdAt = {
+            [Op.gte]: new Date(createdAt)
+        };
+    }
+
+    const reports = await Report.findAll({
+        where,
+        limit: size,
+        offset: (page - 1) * size
+    });
+
+    return res.json(reports);
 });
 
 //Get A Report by ID
