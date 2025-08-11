@@ -23,7 +23,7 @@ const backgroundImage = 'https://win11comptool.s3.us-east-1.amazonaws.com/waterm
 const styles = StyleSheet.create({
     page: {
         padding: 30,
-        fontSize: 10,
+        fontSize: 9,
         fontFamily: 'Helvetica',
     },
     backgroundImage: {
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     subtitle: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 'bold',
         marginBottom: 10,
         textAlign: 'left',
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     bulletpoint: {
-        fontSize: 10,
+        fontSize: 9,
         marginBottom: 5,
         paddingLeft: 10,
         textAlign: 'justify',
@@ -68,14 +68,14 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         textAlign: 'justify',
         lineHeight: 1.5,
-        fontSize: 10,
+        fontSize: 9,
         fontFamily: 'Helvetica',
     },
     paragraphBold: {
         marginBottom: 10,
         textAlign: 'justify',
         lineHeight: 1.5,
-        fontSize: 10,
+        fontSize: 9,
         fontFamily: 'Helvetica-Bold',
     },
     tableHeader: {
