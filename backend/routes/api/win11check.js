@@ -22,7 +22,7 @@ const router = express.Router();
 // }
 
 router.post('/', singleMulterUpload('pdf'), async (req, res) => {
-    const { email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot } = req.body;
+    const { email, stationName, clientName, machine_code, hostname, status, issues, cpu, ram, storage, tpm, secureBoot, publicIP } = req.body;
 
     // const newPassword = generateRandomPassword(12);
 
@@ -38,36 +38,37 @@ router.post('/', singleMulterUpload('pdf'), async (req, res) => {
         tpm,
         secureBoot,
         compatible: status,
-        issues
+        issues,
+        publicIP
     });
 
-    const uploadsDir = path.join(__dirname, '../../uploads');
+    // const uploadsDir = path.join(__dirname, '../../uploads');
 
     // Ensure the uploads directory exists
-    await fs.mkdir(uploadsDir, { recursive: true });
+    // await fs.mkdir(uploadsDir, { recursive: true });
 
-    const pdfFileName = `report-${stationName}-${Date.now()}.pdf`;
-    const pdfFilePath = path.join(uploadsDir, pdfFileName);
+    // const pdfFileName = `report-${stationName}-${Date.now()}.pdf`;
+    // const pdfFilePath = path.join(uploadsDir, pdfFileName);
     
     
     //Create a PDF File and upload it to S3
-    const pdfBuffer = await generatePDFBuffer({
-        email: email,
-        stationName: stationName,
-        clientName: clientName,
-        machineCode: report.machineCode,
-        hostname: report.hostname,
-        cpu: report.cpu,
-        ram: report.ram,
-        storage: report.storage,
-        tpm: report.tpm,
-        secureBoot: report.secureBoot,
-        compatible: report.compatible,
-        issues: report.issues,
-    });
+    // const pdfBuffer = await generatePDFBuffer({
+    //     email: email,
+    //     stationName: stationName,
+    //     clientName: clientName,
+    //     machineCode: report.machineCode,
+    //     hostname: report.hostname,
+    //     cpu: report.cpu,
+    //     ram: report.ram,
+    //     storage: report.storage,
+    //     tpm: report.tpm,
+    //     secureBoot: report.secureBoot,
+    //     compatible: report.compatible,
+    //     issues: report.issues,
+    // });
     
     // Write the PDF buffer to a local file
-    await fs.writeFile(pdfFilePath, pdfBuffer);
+    // await fs.writeFile(pdfFilePath, pdfBuffer);
 
     // await sendMail(newUser.email, machine_code, pdfBuffer, newUser.password);
 
