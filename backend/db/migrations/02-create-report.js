@@ -55,6 +55,10 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
+      publicIP: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       compatible: {
         type: Sequelize.STRING,
         allowNull: false

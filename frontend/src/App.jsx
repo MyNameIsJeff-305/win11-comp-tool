@@ -45,7 +45,9 @@ function Layout() {
           )
         }
       </header>
+      <main className="main-content">
       {isLoaded && <Outlet />}
+      </main>
       <footer className='footer'>
         <p>&copy; 2025 SMART Solutions. All rights reserved.</p>
       </footer>

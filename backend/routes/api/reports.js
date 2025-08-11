@@ -4,33 +4,39 @@ const { Report } = require('../../db/models');
 
 const router = express.Router();
 
-// GET /api/reports?limit=10&page=2&compatible=Yes&machineCode=XYZ123
+// GET /api/reports?limit=10&page=1&search=...&compatible=yes
 router.get('/', async (req, res) => {
-    const { page = 1, limit = 10, search = "" } = req.query;
-    const offset = (page - 1) * limit;
+    try {
+        const { client, compatible, createdAt } = req.query;
 
-    const where = {};
-    if (search) {
-        where[Op.or] = [
-            { machineCode: { [Op.iLike]: `%${search}%` } },
-            { hostname: { [Op.iLike]: `%${search}%` } },
-            { compatible: { [Op.iLike]: `%${search}%` } }
-        ];
+        const page = parseInt(req.query.page) || null;
+        const size = parseInt(req.query.size) || null;
+
+        const where = {};
+
+        if(client) {
+            where.client = client;
+        }
+        if(compatible) {
+            where.compatible = compatible;
+        }
+        if(createdAt) {
+            where.createdAt = {
+                [Op.gte]: new Date(createdAt)
+            };
+        }
+
+        const reports = await Report.findAll({
+            where,
+            limit: size,
+            offset: (page - 1) * size
+        });
+
+        return res.json(reports);
+
+    } catch (error) {
+        next(error);
     }
-
-    const { count, rows } = await Report.findAndCountAll({
-        where,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
-    });
-
-    res.json({
-        reports: rows,
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(count / limit),
-        totalReports: count
-    });
 });
 
 //Get A Report by ID

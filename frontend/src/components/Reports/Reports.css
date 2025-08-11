@@ -5,68 +5,61 @@
     flex-direction: column;
 }
 
-.reports-section {
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 900px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+.reports-tab {
+    flex: 1;
+    width: 80%;
+    padding: 20px;
 }
 
-.section-title {
-    text-align: center;
-    font-size: 1.75rem;
-    margin-bottom: 1.5rem;
-}
-
-.table-container {
-    overflow-x: auto;
-}
-
-.styled-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-}
-
-.styled-table thead {
-    background-color: #e40613;
-    color: white;
-}
-
-.styled-table th,
-.styled-table td {
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-    text-align: left;
-}
-
-.styled-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-.styled-table tr:hover {
-    background-color: #f1f1f1;
-}
-
-.styled-table .yes {
-    color: green;
-    font-weight: bold;
-}
-
-.styled-table .no {
-    color: red;
-    font-weight: bold;
+.reports-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    /* Ensure space for up to 12 cards (3 columns x 4 rows) */
+    grid-column-gap: 20px;
+    min-height: 700px;
+    /* Set a reasonable min-height to maintain visual consistency */
 }
 
 .filters {
+    display: flex;
+    gap: 1rem;
     margin-bottom: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
-.filters input {
-    width: 100%;
-    padding: 0.75rem;
+.filters input,
+.filters select {
+    padding: 8px 12px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.reports-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1rem;
+    gap: 10px;
+}
+
+.reports-footer button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #e40613;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.reports-footer button:hover {
+    background-color: #c0050f;
+}
+
+.reports-footer button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }

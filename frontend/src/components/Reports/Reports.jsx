@@ -1,77 +1,64 @@
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchReports } from "../../store/reports";
+import { getAllReportsThunk, getTotalReportsAmountThunk } from "../../store/reports";
 import { useNavigate } from 'react-router-dom';
+import { FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import './Reports.css';
 import ReportCard from "./ReportCard/ReportCard";
 
 export default function Reports() {
-    const { reports, currentPage, totalPages } = useSelector(state => state.reports.reports);
-    const user = useSelector(state => state.session.user);
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    const allReports = useSelector(state => state.reports.allReports);
+    const totalReports = useSelector(state => state.reports.totalReports);
+    const user = useSelector(state => state.session.user);
+
     const [page, setPage] = useState(1);
-    const [searchQuery, setSearchQuery] = useState("");
+
+    const REPORTS_PER_PAGE = 12;
 
     useEffect(() => {
-        dispatch(fetchReports({ page, search: searchQuery }));
-    }, [dispatch, page, searchQuery]);
+        dispatch(getTotalReportsAmountThunk());
+        dispatch(getAllReportsThunk(page, REPORTS_PER_PAGE));
+        console.log();
+    }, [dispatch, page]);
+
+    const lastPage = Math.ceil(totalReports / REPORTS_PER_PAGE);
 
     if (!user) {
         navigate('/');
         return null;
     }
 
-    const handleSearchChange = (e) => {
-        setSearchQuery(e.target.value);
-        setPage(1);
-    };
-
-    const handlePageChange = (newPage) => {
-        if (newPage >= 1 && newPage <= totalPages) {
-            setPage(newPage);
-        }
-    };
+    if (!allReports || !totalReports) return (
+        <section className='tickets-tab'>
+            <span className="loader"></span>
+        </section>
+    )
 
     return (
-        <div className="reports-wrapper">
-            <main className="home-content">
-                <section className="reports-section">
-                    <h2 className="section-title">All Reports</h2>
-                    <div className="filters">
-                        <input
-                            type="text"
-                            placeholder="Search by machine code, hostname, or compatibility..."
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                        />
-                    </div>
-                    <div className="table-container">
-                        {reports && reports.length > 0 ? (
-                            <div>
-                                {
-                                    reports.map(report => (
-                                        <ReportCard key={report.id} report={report} />
-                                    ))
-                                }
-                            </div>
-                        ) : (
-                            <p>No reports available.</p>
-                        )}
-                    </div>
-
-                    <div className="pagination-controls">
-                        <button onClick={() => handlePageChange(page - 1)} disabled={page === 1}>Previous</button>
-                        <span>Page {currentPage} of {totalPages}</span>
-                        <button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages}>Next</button>
-                    </div>
-                </section>
-            </main>
-
-            <footer className="footer">
-                <p>&copy; 2025 SMART Solutions. All rights reserved.</p>
-            </footer>
-        </div>
+        <section className='reports-tab'>
+            <div>
+                <div className="reports-header">
+                    <h1>Reports</h1>
+                </div>
+                <div className="reports-list">
+                    {allReports.map(report => (
+                        <ReportCard key={report.id} report={report} />
+                    ))}
+                </div>
+            </div>
+            <div className='reports-footer'>
+                <button className='prev-btn' style={{ border: "none" }} disabled={page <= 1} onClick={() => setPage(page - 1)}><FaAngleLeft /></button>
+                <div>
+                    <span >
+                        {page} of {lastPage}
+                    </span>
+                </div>
+                <button className='next-btn' style={{ border: "none" }} disabled={page >= lastPage} onClick={() => setPage(page + 1)}><FaAngleRight /></button>
+            </div>
+        </section>
     );
 }

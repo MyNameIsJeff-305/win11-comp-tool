@@ -1,57 +1,77 @@
-import { csrfFetch } from "./csrf";
+import { csrfFetch } from './csrf';
 
 //CONSTANTS
-const LOAD_REPORTS = "reports/LOAD_REPORTS";
-const LOAD_REPORT = "reports/LOAD_REPORT";
+const GET_ALL_REPORTS = "reports/GET_ALL_REPORTS";
+const GET_TOTAL_REPORTS_AMOUNT = "reports/GET_TOTAL_REPORTS_AMOUNT";
+const GET_REPORT = "reports/GET_REPORT";
 
 //ACTION CREATORS
-const loadReports = (reports) => ({
-    type: LOAD_REPORTS,
-    reports
+const getAllReports = (reports) => ({
+    type: GET_ALL_REPORTS,
+    payload: reports,
 });
 
-const loadReport = (report) => ({
-    type: LOAD_REPORT,
-    report
+const getTotalReportsAmount = (amount) => ({
+    type: GET_TOTAL_REPORTS_AMOUNT,
+    payload: amount,
+});
+
+const getReport = (report) => ({
+    type: GET_REPORT,
+    payload: report,
 });
 
 //THUNKS
-export const fetchReports = (params = {}) => async (dispatch) => {
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`/api/reports?${query}`);
-    const data = await res.json();
-    dispatch(loadReports(data));
+export const getAllReportsThunk = (page, size) => async (dispatch) => {
+    const response = await csrfFetch(`/api/reports?size=${size}&page=${page}`);
+    const reports = await response.json();
+    dispatch(getAllReports(reports));
 };
 
-export const fetchReport = (id) => async (dispatch) => {
+export const getTotalReportsAmountThunk = () => async (dispatch) => {
+    const response = await csrfFetch('/api/reports');
+    const reports = await response.json();
+    // console.log("TOTAL REPORTS AMOUNT:", reports);
+    dispatch(getTotalReportsAmount(reports.length));
+};
+
+export const getReportThunk = (id) => async (dispatch) => {
     const response = await csrfFetch(`/api/reports/${id}`);
     if (response.ok) {
         const report = await response.json();
-        dispatch(loadReport(report));
+        dispatch(getReport(report));
+    } else {
+        throw new Error("Failed to fetch report");
     }
 };
 
 //REDUCER
 const initialState = {
-    reports: [],
+    allReports: [],
+    totalReports: 0,
     report: null
-};
+}
 
 const reportsReducer = (state = initialState, action) => {
     switch (action.type) {
-        case LOAD_REPORTS:
+        case GET_ALL_REPORTS:
             return {
                 ...state,
-                reports: action.reports
-            };
-        case LOAD_REPORT:
+                allReports: action.payload,
+            }
+        case GET_TOTAL_REPORTS_AMOUNT:
             return {
                 ...state,
-                report: action.report
-            };
+                totalReports: action.payload
+            }
+        case GET_REPORT:
+            return {
+                ...state,
+                report: action.payload
+            }
         default:
             return state;
     }
-};
+}
 
 export default reportsReducer;
