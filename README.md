@@ -123,7 +123,6 @@ Contributions are welcome! To get started:
 4. Push to your fork (`git push origin feature/...`)  
 5. Open a Pull Request
 
-Please ensure your code adheres to existing style guidelines and includes relevant tests.
 
 ---
 
@@ -135,13 +134,8 @@ Distributed under the **MIT License**. See [LICENSE](./LICENSE) for more informa
 
 ## Contact
 
-Maintainer: **Your Name or Alias**  
+Maintainer: **Michel Garcia Ribalta*  
 GitHub: [@MyNameIsJeff-305](https://github.com/MyNameIsJeff-305)  
 Feel free to open issues with feedback or suggestions!
 
 ---
-
-*(Optional sections you might want to add: architecture diagram, demo screenshots, roadmap, acknowledgments, versioning.)*
-
-Let me know if you'd like to tailor the installation section for a particular framework (like React, Express, or a specific package manager), or include examples such as screenshots. Happy to help customize it further!
-::contentReference[oaicite:2]{index=2}
