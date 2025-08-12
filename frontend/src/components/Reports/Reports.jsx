@@ -10,15 +10,17 @@ export default function Reports() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const allReports = useSelector((state) => state.reports.allReports);
-    const totalReports = useSelector((state) => state.reports.totalReports);
+    const REPORTS_PER_PAGE = 12;
+
+    const allReports = useSelector((state) => state.reports.allReports.reports);
+    const totalReports = useSelector((state) => state.reports.allReports.totalReports);
     const user = useSelector((state) => state.session.user);
+
     const [compatibilityFilter, setCompatibilityFilter] = useState("all"); // Default filter state
 
     const [page, setPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState(""); // Search input state
 
-    const REPORTS_PER_PAGE = 12;
 
     useEffect(() => {
         // Reset page to 1 when compatibility filter changes
@@ -29,7 +31,7 @@ export default function Reports() {
     useEffect(() => {
         const compatibleParam = compatibilityFilter === "all" ? '' : compatibilityFilter;
         // Fetch total count filtered by searchTerm
-        dispatch(getTotalReportsAmountThunk(searchTerm));
+        dispatch(getTotalReportsAmountThunk(searchTerm, compatibleParam));
         // Fetch filtered reports with pagination
         dispatch(getAllReportsThunk(page, REPORTS_PER_PAGE, searchTerm, compatibleParam));
     }, [dispatch, page, searchTerm, compatibilityFilter]);
@@ -41,11 +43,13 @@ export default function Reports() {
         return null;
     }
 
+    //Show loader while fetching data. If no data, show friendly message.
     if (!allReports || !totalReports)
         return (
-            <section className="tickets-tab">
+            <>
                 <span className="loader"></span>
-            </section>
+                <p>Loading reports...</p>
+            </>
         );
 
     // Handle form submission to avoid page reload

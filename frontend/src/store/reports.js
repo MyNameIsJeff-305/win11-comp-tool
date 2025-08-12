@@ -29,10 +29,10 @@ export const getAllReportsThunk = (page, size, search, compatibility) => async (
 };
 
 export const getTotalReportsAmountThunk = () => async (dispatch) => {
-    const response = await csrfFetch('/api/reports');
+    const response = await csrfFetch('/api/reports/total');
     const reports = await response.json();
     // console.log("TOTAL REPORTS AMOUNT:", reports);
-    dispatch(getTotalReportsAmount(reports.length));
+    dispatch(getTotalReportsAmount(reports));
 };
 
 export const getReportThunk = (id) => async (dispatch) => {
@@ -47,8 +47,7 @@ export const getReportThunk = (id) => async (dispatch) => {
 
 //REDUCER
 const initialState = {
-    allReports: [],
-    totalReports: 0,
+    allReports: { reports: [], totalReports: 0 },
     report: null
 }
 

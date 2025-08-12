@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
         let size = parseInt(req.query.size, 10);
 
         if (!page || page < 1) page = 1;
-        if (!size || size < 1) size = 10;
+        if (!size || size < 1) size = 12;
 
         // Decide which LIKE operator to use
         const likeOperator = sequelize.getDialect() === 'postgres' ? Op.iLike : Op.like;
@@ -52,9 +52,46 @@ router.get('/', async (req, res) => {
             order: [['createdAt', 'DESC']]
         });
 
-        return res.json(reports);
+        const totalReports = await Report.count({ where });
+
+        return res.json({ reports, totalReports });
     } catch (error) {
         console.error('Error fetching reports:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.get('/total', async (req, res) => {
+    try {
+        const { searchTerm, compatibleParam } = req.query;
+
+        const where = {};
+
+        if (searchTerm) {
+            const likeOperator = sequelize.getDialect() === 'postgres' ? Op.iLike : Op.like;
+            where[Op.or] = [
+                { client: { [likeOperator]: `%${searchTerm}%` } },
+                { stationName: { [likeOperator]: `%${searchTerm}%` } },
+                { hostname: { [likeOperator]: `%${searchTerm}%` } },
+                { machineCode: { [likeOperator]: `%${searchTerm}%` } },
+                { publicIP: { [likeOperator]: `%${searchTerm}%` } },
+                { email: { [likeOperator]: `%${searchTerm}%` } }
+            ];
+        }
+
+        if (compatibleParam !== undefined) {
+            if (compatibleParam.toLowerCase() === 'yes') {
+                where.compatible = 'Yes';
+            } else if (compatibleParam.toLowerCase() === 'no') {
+                where.compatible = 'No';
+            }
+        }
+
+        const totalReports = await Report.count({ where });
+
+        return res.json({ totalReports });
+    } catch (error) {
+        console.error('Error fetching total reports:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

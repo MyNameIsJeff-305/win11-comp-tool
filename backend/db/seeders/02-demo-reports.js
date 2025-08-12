@@ -22,10 +22,10 @@ module.exports = {
         ram: '12GB',
         storage: '1TB HDD',
         tpm: '2.0',
-        secureBoot: 'Enabled',
+        secureBoot: 'Disabled',
         publicIP: '192.168.1.1',
-        compatible: 'Yes',
-        issues: "None"
+        compatible: 'No',
+        issues: "Secure Boot disabled"
       },
       {
         machineCode: 'LMN789',
