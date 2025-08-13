@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import LoginPage from './components/LoginPage/LoginPage';
 import Home from './components/Home/Home';
 import Reports from './components/Reports';
+import ReportDetails from './components/Reports/ReportDetails';
 
 import './index.css';
 
@@ -70,6 +71,10 @@ const router = createBrowserRouter([
       {
         path: '/reports',
         element: <Reports />
+      },
+      {
+        path: '/reports/:reportId',
+        element: <ReportDetails />
       }
     ]
   }

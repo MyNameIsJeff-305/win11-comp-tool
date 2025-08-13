@@ -96,4 +96,19 @@ router.get('/total', async (req, res) => {
     }
 });
 
+// Get a specific report by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const report = await Report.findByPk(id);
+        if (!report) {
+            return res.status(404).json({ error: 'Report not found' });
+        }
+        return res.json(report);
+    } catch (error) {
+        console.error('Error fetching report:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;

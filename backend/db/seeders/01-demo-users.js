@@ -13,11 +13,23 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await User.bulkCreate([
       {
-        email: 'smart@solutions.com',
-        stationName: 'FD-1',
+        email: 'alex.hernandez@thesmartsolution.net',
+        stationName: 'CEO-MAC',
         clientName: 'SMART Solutions',
         hashedPassword: bcrypt.hashSync('Smart0502!', 10),
       },
+      {
+        email: 'media@thesmartsolution.net',
+        stationName: 'Media-MAC',
+        clientName: 'SMART Solutions',
+        hashedPassword: bcrypt.hashSync('MM4ever.12395', 10),
+      },
+      {
+        email: 'c.hernandez@thesmartsolution.net',
+        stationName: 'Helpdesk-Station',
+        clientName: 'SMART Solutions',
+        hashedPassword: bcrypt.hashSync('Smart0502!', 10),
+      }
     ], options);
   },
 
