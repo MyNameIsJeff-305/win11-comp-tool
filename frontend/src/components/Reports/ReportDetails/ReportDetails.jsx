@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getReportThunk } from '../../../store/reports';
@@ -9,7 +9,7 @@ export default function ReportDetails() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const user = useSelector((state) => state.session.user);
+    // const user = useSelector((state) => state.session.user);
     const report = useSelector((state) => state.reports.report)
 
     const { reportId } = useParams();
