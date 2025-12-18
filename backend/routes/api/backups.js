@@ -10,4 +10,17 @@ router.get('/is-first-friday', (req, res) => {
     res.json({ isFirstFriday });
 });
 
+router.get('/filter-companies-with-backup-enabled', async (req, res) => { 
+    const {companies} = req.body;
+    console.log(companies);
+    //Need to filter companies array ton only include those with backup_service key set to "Yes"
+    if (!Array.isArray(companies)) {
+        return res.status(400).json({ error: 'Invalid input, expected an array of companies' });
+    }
+
+    const filteredCompanies = companies.filter(company => company.custom_fields.backup_service === "Yes");
+
+    res.json({ filteredCompanies });
+})
+
 module.exports = router;
