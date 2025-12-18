@@ -22,33 +22,47 @@ if (!isProduction) {
     app.use(cors());
 }
 
-app.use(helmet.crossOriginResourcePolicy({
-    policy: "cross-origin"
-}));
-
 app.use(
-    csurf({
-        cookie: {
-            secure: isProduction,
-            sameSite: isProduction && "Lax",
-            httpOnly: true
-        }
+    helmet.crossOriginResourcePolicy({
+        policy: "cross-origin"
     })
 );
 
+// CSRF middleware (defined, not global)
+const csrfProtection = csurf({
+    cookie: {
+        secure: isProduction,
+        sameSite: isProduction && "Lax",
+        httpOnly: true
+    }
+});
+
+// Apply CSRF ONLY to non-API routes
+app.use((req, res, next) => {
+    if (
+        req.path.startsWith('/api') ||
+        req.path.startsWith('/integrations')
+    ) {
+        return next();
+    }
+    return csrfProtection(req, res, next);
+});
+
 app.use(routes);
+
+/* ---------- Error handling ---------- */
 
 app.use((_req, _res, next) => {
     const err = new Error("The requested resource couldn't be found.");
     err.title = "Resource Not Found";
     err.errors = { message: "The requested resource couldn't be found." };
     err.status = 404;
-    next(err.errors);
+    next(err);
 });
 
 app.use((err, _req, _res, next) => {
     if (err instanceof ValidationError) {
-        let errors = {};
+        const errors = {};
         for (let error of err.errors) {
             errors[error.path] = error.message;
         }
@@ -66,19 +80,6 @@ app.use((err, _req, res, _next) => {
         message: err.message,
         errors: err.errors,
         stack: isProduction ? null : err.stack
-    });
-});
-
-app.use((err, _req, res, _next) => {
-    res.status(err.status || 500);
-    if (isProduction) {
-        delete err.title;
-        delete err.stack;
-    }
-    console.error(err);
-    res.json({
-        message: err.message,
-        errors: err.errors,
     });
 });
 

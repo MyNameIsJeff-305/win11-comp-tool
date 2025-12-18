@@ -10,17 +10,32 @@ router.get('/is-first-friday', (req, res) => {
     res.json({ isFirstFriday });
 });
 
-router.get('/filter-companies-with-backup-enabled', async (req, res) => { 
-    const {companies} = req.body;
-    console.log("Companies is an array: ", Array.isArray(companies));
-    //Need to filter companies array ton only include those with backup_service key set to "Yes"
+router.post('/filter-companies-with-backup-enabled', (req, res) => {
+    const { companies } = req.body;
+
+    // Defensive logging (useful in prod)
+    console.log('[filter-companies-with-backup-enabled]');
+    console.log('Body received:', typeof companies, Array.isArray(companies));
+
+    // Validation
     if (!Array.isArray(companies)) {
-        return res.status(400).json({ error: 'Invalid input, expected an array of companies' });
+        return res.status(400).json({
+            error: 'Invalid input',
+            message: 'Expected "companies" to be an array',
+            receivedType: typeof companies
+        });
     }
 
-    const filteredCompanies = companies.filter(company => company.custom_fields.backup_service === "Yes");
+    // Filtering logic (safe optional chaining)
+    const filteredCompanies = companies.filter(company =>
+        company?.custom_fields?.backup_service === 'Yes'
+    );
 
-    res.json({ filteredCompanies });
-})
+    res.json({
+        totalReceived: companies.length,
+        totalWithBackupEnabled: filteredCompanies.length,
+        filteredCompanies
+    });
+});
 
 module.exports = router;
