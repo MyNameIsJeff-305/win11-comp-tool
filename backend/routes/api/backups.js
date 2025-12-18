@@ -11,7 +11,7 @@ router.get('/is-first-friday', (req, res) => {
 });
 
 router.get('/filter-companies-with-backup-enabled', async (req, res) => { 
-    const {companies} = req.body;
+    const companies = req.body.companies;
     console.log(companies);
     //Need to filter companies array ton only include those with backup_service key set to "Yes"
     if (!Array.isArray(companies)) {
