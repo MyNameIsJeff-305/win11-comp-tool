@@ -11,12 +11,11 @@ router.get('/is-first-friday', (req, res) => {
 });
 
 router.post('/filter-companies-with-backup-enabled', (req, res) => {
-    console.log('BODY KEYS:', Object.keys(req.body));
+    console.log('BODY:', req.body);
     const { departments } = req.body;
 
-    // Defensive logging (useful in prod)
-    console.log('[filter-companies-with-backup-enabled]');
-    console.log('Body received:', typeof departments, Array.isArray(departments));
+    console.log('DEPARTMENTS:', departments);
+    console.log('TYPE OF DEPARTMENTS:', typeof departments);
 
     // Validation
     if (!Array.isArray(departments)) {
