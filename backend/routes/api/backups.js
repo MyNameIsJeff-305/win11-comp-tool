@@ -11,30 +11,30 @@ router.get('/is-first-friday', (req, res) => {
 });
 
 router.post('/filter-companies-with-backup-enabled', (req, res) => {
-    const { companies } = req.body;
+    const { departments } = req.body;
 
     // Defensive logging (useful in prod)
     console.log('[filter-companies-with-backup-enabled]');
-    console.log('Body received:', typeof companies, Array.isArray(companies));
+    console.log('Body received:', typeof departments, Array.isArray(departments));
 
     // Validation
-    if (!Array.isArray(companies)) {
+    if (!Array.isArray(departments)) {
         return res.status(400).json({
             error: 'Invalid input',
-            message: 'Expected "companies" to be an array',
-            receivedType: typeof companies
+            message: 'Expected "departments" to be an array',
+            receivedType: typeof departments
         });
     }
 
     // Filtering logic (safe optional chaining)
-    const filteredCompanies = companies.filter(company =>
-        company?.custom_fields?.backup_service === 'Yes'
+    const filteredDepartments = departments.filter(department =>
+        department?.custom_fields?.backup_service === 'Yes'
     );
 
     res.json({
-        totalReceived: companies.length,
-        totalWithBackupEnabled: filteredCompanies.length,
-        filteredCompanies
+        totalReceived: departments.length,
+        totalWithBackupEnabled: filteredDepartments.length,
+        filteredDepartments
     });
 });
 
