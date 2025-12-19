@@ -14,7 +14,6 @@ router.post('/filter-companies-with-backup-enabled', (req, res) => {
     console.log('BODY:', req.body);
     const { departments } = req.body;
 
-    console.log('DEPARTMENTS:', departments);
     console.log('TYPE OF DEPARTMENTS:', typeof departments);
 
     // Validation
