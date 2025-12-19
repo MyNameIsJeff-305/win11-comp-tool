@@ -11,24 +11,34 @@ router.get('/is-first-friday', (req, res) => {
 });
 
 router.post('/filter-companies-with-backup-enabled', (req, res) => {
-    const { departments } = req.body;
-
-    // Defensive logging (useful in prod)
     console.log('[filter-companies-with-backup-enabled]');
-    console.log('Body received:', typeof departments, Array.isArray(departments));
+    console.log('Raw body:', req.body);
 
-    // Validation
-    if (!Array.isArray(departments)) {
+    let parsedBody;
+
+    try {
+        parsedBody = typeof req.body.response?.body === 'string'
+            ? JSON.parse(req.body.response.body)
+            : req.body.response?.body;
+    } catch (err) {
         return res.status(400).json({
-            error: 'Invalid input',
-            message: 'Expected "departments" to be an array',
-            receivedType: typeof departments
+            error: 'Invalid JSON',
+            message: 'Failed to parse Freshservice response body'
         });
     }
 
-    // Filtering logic (safe optional chaining)
-    const filteredDepartments = departments.filter(department =>
-        department?.custom_fields?.backup_service === 'Yes'
+    const departments = parsedBody?.departments;
+
+    if (!Array.isArray(departments)) {
+        return res.status(400).json({
+            error: 'Invalid input',
+            message: 'Expected departments array',
+            received: typeof departments
+        });
+    }
+
+    const filteredDepartments = departments.filter(dep =>
+        dep?.custom_fields?.backup_service === 'Yes'
     );
 
     res.json({
