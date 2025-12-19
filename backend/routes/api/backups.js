@@ -11,7 +11,7 @@ router.get('/is-first-friday', (req, res) => {
 });
 
 router.post('/filter-companies-with-backup-enabled', (req, res) => {
-    // console.log('BODY:', req.body);
+    console.log('BODY:', req.body);
     const { departments } = req.body;
 
     console.log('TYPE OF DEPARTMENTS:', typeof departments);
