@@ -45,6 +45,17 @@ router.post('/create-backup-tickets', async (req, res) => {
         // 3️⃣ Create a ticket for EACH company
         for (const company of backupEnabledCompanies) {
             try {
+                //Get Prime User Email
+                const userResponse = await axios.get(
+                    `https://${FRESHSERVICE_DOMAIN}.freshservice.com/api/v2/requesters/${company.prime_user_id}`,
+                    {
+                        auth: {
+                            username: FRESHSERVICE_API_KEY,
+                            password: FRESHSERVICE_PASSWORD
+                        }
+                    }
+                )
+
                 const ticketPayload = {
                     subject: `Backup Verification – ${company.name}`,
                     description: `
@@ -62,7 +73,7 @@ Tasks:
 This ticket was created automatically.
                     `,
                     email:
-                        company?.prime_user_name ||
+                        userResponse.data?.requester?.email ||
                         'default@example.com',
                     department_id: company.id,
                     priority: 2,
