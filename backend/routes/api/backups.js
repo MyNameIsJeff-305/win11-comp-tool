@@ -77,7 +77,7 @@ Tasks:
 This ticket was created automatically.
                     `,
                     email:
-                        userResponse.requester?.primary_email ||
+                        userResponse.data.requester?.primary_email ||
                         'default@example.com',
                     department_id: company.id,
                     priority: 2,
