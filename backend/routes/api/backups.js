@@ -55,9 +55,10 @@ router.post('/create-backup-tickets', async (req, res) => {
                             password: FRESHSERVICE_PASSWORD
                         }
                     }
-                )
+                );
 
-                // console.log(userResponse.data);
+                //Verify with console.log the Requester Primary Email
+                console.log(`Prime user email: ${userResponse.data.requester?.primary_email}`);
 
                 const ticketPayload = {
                     subject: `Backup Verification – ${company.name}`,
