@@ -46,7 +46,7 @@ router.post('/create-backup-tickets', async (req, res) => {
         for (const company of backupEnabledCompanies) {
             try {
                 //Get Prime User Email
-                console.log(`Fetching prime user ${company.prime_user_id} for company ${company.name}`);
+                // console.log(`Fetching prime user ${company.prime_user_id} for company ${company.name}`);
                 const userResponse = await axios.get(
                     `https://${FRESHSERVICE_DOMAIN}.freshservice.com/api/v2/requesters/${company.prime_user_id}`,
                     {
@@ -58,7 +58,7 @@ router.post('/create-backup-tickets', async (req, res) => {
                 );
 
                 //Verify with console.log the Requester Primary Email
-                console.log(`Prime user email: ${userResponse.data.requester?.primary_email}`);
+                // console.log(`Prime user email: ${userResponse.data.requester?.primary_email}`);
 
                 const ticketPayload = {
                     subject: `Backup Verification – ${company.name}`,
