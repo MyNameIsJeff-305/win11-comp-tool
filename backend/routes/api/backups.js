@@ -56,7 +56,7 @@ router.post('/create-backup-tickets', async (req, res) => {
                     }
                 )
 
-                console.log(userResponse.requester?.primary_email);
+                console.log(userResponse);
 
                 const ticketPayload = {
                     subject: `Backup Verification – ${company.name}`,
