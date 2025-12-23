@@ -8,43 +8,13 @@ const {
     FRESHSERVICE_PASSWORD
 } = process.env;
 
-//Get request toKnow if today is the monday before the first Friday of the month
-router.get('/is-monday-before-first-friday', (req, res) => {
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
-    const dateOfMonth = today.getDate();
-
-    // Check if today is Monday
-    if (dayOfWeek !== 1) {
-        return res.json({ isMondayBeforeFirstFriday: false });
-    }
-
-    // Find the first Friday of the month
-    let firstFridayDate = null;
-    for (let i = 1; i <= 7; i++) {
-        const date = new Date(today.getFullYear(), today.getMonth(), i);
-        if (date.getDay() === 5) { // 5 is Friday
-            firstFridayDate = i;
-            break;
-        }
-    }
-
-    // Check if today is the Monday before the first Friday
-    const isMondayBeforeFirstFriday = (firstFridayDate !== null) && (dateOfMonth === firstFridayDate - 3);
-
-    res.json({ isMondayBeforeFirstFriday });
-});
-
-/**
- * GET all companies (departments) from Freshservice
- * and filter only those with Backup Service enabled
- */
-router.get('/companies-with-backup-enabled', async (req, res) => {
+router.post('/create-backup-tickets', async (req, res) => {
     try {
         let page = 1;
         let allDepartments = [];
         let hasMore = true;
 
+        // 1️⃣ Fetch ALL departments (companies)
         while (hasMore) {
             const response = await axios.get(
                 `https://${FRESHSERVICE_DOMAIN}.freshservice.com/api/v2/departments`,
@@ -53,9 +23,6 @@ router.get('/companies-with-backup-enabled', async (req, res) => {
                     auth: {
                         username: FRESHSERVICE_API_KEY,
                         password: FRESHSERVICE_PASSWORD
-                    },
-                    headers: {
-                        'Content-Type': 'application/json'
                     }
                 }
             );
@@ -63,30 +30,83 @@ router.get('/companies-with-backup-enabled', async (req, res) => {
             const departments = response.data?.departments || [];
             allDepartments.push(...departments);
 
-            // Freshservice returns empty array when no more pages
-            if (departments.length === 0) {
-                hasMore = false;
-            } else {
-                page++;
-            }
+            hasMore = departments.length > 0;
+            page++;
         }
 
-        // 🔍 Filter companies with backup enabled
-        const companiesWithBackup = allDepartments.filter(dept =>
+        // 2️⃣ Filter backup-enabled companies
+        const backupEnabledCompanies = allDepartments.filter(dept =>
             dept?.custom_fields?.backup_service === 'Yes'
         );
 
+        const createdTickets = [];
+        const failedTickets = [];
+
+        // 3️⃣ Create a ticket for EACH company
+        for (const company of backupEnabledCompanies) {
+            try {
+                const ticketPayload = {
+                    subject: `Backup Verification – ${company.name}`,
+                    description: `
+Automated Backup Verification Ticket
+
+Company: ${company.name}
+Backup Service: Enabled
+
+Tasks:
+- Verify latest backup completed successfully
+- Confirm offsite copy integrity
+- Check rotation / retention status
+- Notify client if action is required
+
+This ticket was created automatically.
+                    `,
+                    email:
+                        company?.prime_user_name ||
+                        'default@example.com',
+                    department_id: company.id,
+                    priority: 2,
+                    status: 2, // Open
+                    source: 2 // Automation / API
+                };
+
+                const ticketResponse = await axios.post(
+                    `https://${FRESHSERVICE_DOMAIN}.freshservice.com/api/v2/tickets`,
+                    ticketPayload,
+                    {
+                        auth: {
+                            username: FRESHSERVICE_API_KEY,
+                            password: FRESHSERVICE_PASSWORD
+                        }
+                    }
+                );
+
+                createdTickets.push({
+                    company: company.name,
+                    ticketId: ticketResponse.data.ticket.id
+                });
+
+            } catch (ticketError) {
+                failedTickets.push({
+                    company: company.name,
+                    error: ticketError?.response?.data || ticketError.message
+                });
+            }
+        }
+
         res.json({
-            totalCompanies: allDepartments.length,
-            totalWithBackupEnabled: companiesWithBackup.length,
-            companiesWithBackup
+            totalCompaniesChecked: allDepartments.length,
+            backupEnabledCompanies: backupEnabledCompanies.length,
+            ticketsCreated: createdTickets.length,
+            createdTickets,
+            failedTickets
         });
 
     } catch (error) {
-        console.error('Freshservice API Error:', error?.response?.data || error.message);
+        console.error('Automation Error:', error?.response?.data || error.message);
 
         res.status(500).json({
-            error: 'Failed to fetch companies from Freshservice',
+            error: 'Backup ticket automation failed',
             details: error?.response?.data || error.message
         });
     }
