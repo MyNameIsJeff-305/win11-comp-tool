@@ -8,6 +8,33 @@ const {
     FRESHSERVICE_PASSWORD
 } = process.env;
 
+//Get request toKnow if today is the monday before the first Friday of the month
+router.get('/is-monday-before-first-friday', (req, res) => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const dateOfMonth = today.getDate();
+
+    // Check if today is Monday
+    if (dayOfWeek !== 1) {
+        return res.json({ isMondayBeforeFirstFriday: false });
+    }
+
+    // Find the first Friday of the month
+    let firstFridayDate = null;
+    for (let i = 1; i <= 7; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth(), i);
+        if (date.getDay() === 5) { // 5 is Friday
+            firstFridayDate = i;
+            break;
+        }
+    }
+
+    // Check if today is the Monday before the first Friday
+    const isMondayBeforeFirstFriday = (firstFridayDate !== null) && (dateOfMonth === firstFridayDate - 3);
+
+    res.json({ isMondayBeforeFirstFriday });
+});
+
 /**
  * GET all companies (departments) from Freshservice
  * and filter only those with Backup Service enabled
