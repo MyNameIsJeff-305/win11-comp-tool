@@ -56,6 +56,8 @@ router.post('/create-backup-tickets', async (req, res) => {
                     }
                 )
 
+                console.log(userResponse.requester?.primary_email);
+
                 const ticketPayload = {
                     subject: `Backup Verification – ${company.name}`,
                     description: `
@@ -73,7 +75,7 @@ Tasks:
 This ticket was created automatically.
                     `,
                     email:
-                        userResponse.data?.requester?.email ||
+                        userResponse.requester?.primary_email ||
                         'default@example.com',
                     department_id: company.id,
                     priority: 2,
