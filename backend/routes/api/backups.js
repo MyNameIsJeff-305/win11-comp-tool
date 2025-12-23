@@ -2,6 +2,10 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
+//Get This month using moment.js
+const moment = require('moment');
+const thisMonth = moment().format('MMMM YYYY');
+
 const {
     FRESHSERVICE_API_KEY,
     FRESHSERVICE_DOMAIN,
@@ -61,7 +65,7 @@ router.post('/create-backup-tickets', async (req, res) => {
                 // console.log(`Prime user email: ${userResponse.data.requester?.primary_email}`);
 
                 const ticketPayload = {
-                    subject: `Backup Verification – ${company.name}`,
+                    subject: `Backup Verification - ${thisMonth} – ${company.name}`,
                     description: `
 Automated Backup Verification Ticket
 
