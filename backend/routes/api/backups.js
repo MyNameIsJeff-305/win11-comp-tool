@@ -1,40 +1,68 @@
 const express = require('express');
+const axios = require('axios');
 const router = express.Router();
 
-router.get('/is-first-friday', (req, res) => {
-    //Check if today is the first Friday of the month using Moment.js
-    const moment = require('moment');
-    const today = moment();
-    const isFirstFriday = today.date() <= 7 && today.day() === 5;
+const {
+    FRESHSERVICE_API_KEY,
+    FRESHSERVICE_DOMAIN,
+    FRESHSERVICE_PASSWORD
+} = process.env;
 
-    res.json({ isFirstFriday });
-});
+/**
+ * GET all companies (departments) from Freshservice
+ * and filter only those with Backup Service enabled
+ */
+router.get('/companies-with-backup-enabled', async (req, res) => {
+    try {
+        let page = 1;
+        let allDepartments = [];
+        let hasMore = true;
 
-router.post('/filter-companies-with-backup-enabled', (req, res) => {
-    console.log('BODY:', req.body);
-    const { departments } = req.body;
+        while (hasMore) {
+            const response = await axios.get(
+                `https://${FRESHSERVICE_DOMAIN}.freshservice.com/api/v2/departments`,
+                {
+                    params: { page },
+                    auth: {
+                        username: FRESHSERVICE_API_KEY,
+                        password: FRESHSERVICE_PASSWORD
+                    },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
-    console.log('TYPE OF DEPARTMENTS:', typeof departments);
+            const departments = response.data?.departments || [];
+            allDepartments.push(...departments);
 
-    // Validation
-    if (!Array.isArray(departments)) {
-        return res.status(400).json({
-            error: 'Invalid input',
-            message: 'Expected "departments" to be an array',
-            receivedType: typeof departments
+            // Freshservice returns empty array when no more pages
+            if (departments.length === 0) {
+                hasMore = false;
+            } else {
+                page++;
+            }
+        }
+
+        // 🔍 Filter companies with backup enabled
+        const companiesWithBackup = allDepartments.filter(dept =>
+            dept?.custom_fields?.backup_service === 'Yes'
+        );
+
+        res.json({
+            totalCompanies: allDepartments.length,
+            totalWithBackupEnabled: companiesWithBackup.length,
+            companiesWithBackup
+        });
+
+    } catch (error) {
+        console.error('Freshservice API Error:', error?.response?.data || error.message);
+
+        res.status(500).json({
+            error: 'Failed to fetch companies from Freshservice',
+            details: error?.response?.data || error.message
         });
     }
-
-    // Filtering logic (safe optional chaining)
-    const filteredDepartments = departments.filter(department =>
-        department?.custom_fields?.backup_service === 'Yes'
-    );
-
-    res.json({
-        totalReceived: departments.length,
-        totalWithBackupEnabled: filteredDepartments.length,
-        filteredDepartments
-    });
 });
 
 module.exports = router;
