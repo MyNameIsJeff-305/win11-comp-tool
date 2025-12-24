@@ -2,9 +2,12 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
+const { HDDCon } = require('../../db/models');
+
 //Get This month using moment.js
 const moment = require('moment');
 const thisMonth = moment().format('MMMM YYYY');
+let firstFridayOfThisMonth = moment().startOf('month').day(5); // 5 = Friday
 
 const {
     FRESHSERVICE_API_KEY,
@@ -12,7 +15,29 @@ const {
     FRESHSERVICE_PASSWORD
 } = process.env;
 
+// Endpoint to check if today is Monday before the first Friday of the month. If so, return true, otherwise false
+router.get('/is-monday-before-first-friday', (req, res) => {
+    const today = moment();
+    const firstFriday = moment().startOf('month').day(5); // 5 = Friday
+
+    // If the first day of the month is a Friday, the Monday is in the previous month
+    if (firstFriday.date() > 7) {
+        firstFriday.add(7, 'days');
+    }
+
+    firstFridayOfThisMonth = firstFriday;
+
+    const isMondayBeforeFirstFriday =
+        today.day() === 1 && today.isBefore(firstFriday);
+
+    res.json({ isMondayBeforeFirstFriday });
+});
+
 router.post('/create-backup-tickets', async (req, res) => {
+    const currentDisk = await HDDCon.findOne({
+        where: { date: thisMonth }
+    })
+
     try {
         let page = 1;
         let allDepartments = [];
@@ -72,6 +97,8 @@ Automated Backup Verification Ticket
 Company: ${company.name}
 Backup Service: Enabled
 
+This Month's HDD is
+
 Tasks:
 - Verify latest backup completed successfully
 - Confirm offsite copy integrity
@@ -86,7 +113,12 @@ This ticket was created automatically.
                     department_id: company.id,
                     priority: 2,
                     status: 2, // Open
-                    source: 2 // Automation / API
+                    source: 2, // Automation / API
+                    due_by: firstFridayOfThisMonth.format('YYYY-MM-DD HH:mm:ss'),
+                    custom_fields: {
+                        hdd_number: currentDisk?.HDDNumber || 0,
+                        backup_date: firstFridayOfThisMonth.format('YYYY-MM-DD HH:mm:ss')
+                    }
                 };
 
                 const ticketResponse = await axios.post(
@@ -131,6 +163,16 @@ This ticket was created automatically.
     }
 });
 
+router.get('/test-backup-ticket', async (req, res) => {
+    console.log(moment().format('MMMM YYYY'));
 
+    const getHDDData = await HDDCon.findAll({
+        where: { date: thisMonth }
+    });
+
+    console.log('HDD Data for this month:', getHDDData);
+
+    res.json(getHDDData);
+});
 
 module.exports = router;
