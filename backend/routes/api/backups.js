@@ -7,7 +7,6 @@ const { HDDCon } = require('../../db/models');
 //Get This month using moment.js
 const moment = require('moment');
 const thisMonth = moment().format('MMMM YYYY');
-let firstFridayOfThisMonth = moment().startOf('month').day(5); // 5 = Friday
 
 const {
     FRESHSERVICE_API_KEY,
@@ -25,8 +24,6 @@ router.get('/is-monday-before-first-friday', (req, res) => {
         firstFriday.add(7, 'days');
     }
 
-    firstFridayOfThisMonth = firstFriday;
-
     const isMondayBeforeFirstFriday =
         today.day() === 1 && today.isBefore(firstFriday);
 
@@ -37,6 +34,10 @@ router.post('/create-backup-tickets', async (req, res) => {
     const currentDisk = await HDDCon.findOne({
         where: { date: thisMonth }
     })
+
+    //Create a variable for the next Friday taking today as reference
+    const nextFriday = moment().day(5 + (moment().day() <= 5 ? 0 : 7));
+
 
     try {
         let page = 1;
@@ -114,10 +115,11 @@ This ticket was created automatically.
                     priority: 2,
                     status: 2, // Open
                     source: 2, // Automation / API
-                    due_by: firstFridayOfThisMonth.format('YYYY-MM-DD HH:mm:ss'),
+                    fr_due_by: nextFriday,
+                    due_by: nextFriday,
                     custom_fields: {
                         hdd_number: currentDisk?.HDDNumber || 0,
-                        backup_date: firstFridayOfThisMonth.format('YYYY-MM-DD HH:mm:ss')
+                        backup_date: nextFriday
                     }
                 };
 
