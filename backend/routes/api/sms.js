@@ -68,7 +68,7 @@ async function findBackupTicket(phone) {
 
     console.log("Found requester:", requester.id);
 
-    const ticketResponse = await fs.get(`/tickets/filter?query="requester_id:${requester.id} AND status:2 AND workspace_id:2"`);
+    const ticketResponse = await fs.get(`/tickets/filter?query="requester_id:${requester.id}" AND "status:2" AND "workspace_id:2"`);
 
 
     console.log("Ticket search response:", ticketResponse.data);
