@@ -26,40 +26,52 @@ const fs = axios.create({
 async function findBackupTicket(phone) {
     console.log("ENTERED FIND TICKET FUNCTION");
 
-    // Normalize phone
-    const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`;
-    const encodedPhone = encodeURIComponent(normalizedPhone);
-
-    console.log("SEARCHING FOR REQUESTER WITH PHONE:", normalizedPhone);
-
-    // 1️⃣ Try work phone
-    let requesterResponse = await fs.get(
-        `/requesters?query=work_phone_number:${encodedPhone}`
-    );
-
-    let requester = requesterResponse.data.requesters?.[0];
-
-    // 2️⃣ Fallback to mobile phone
-    if (!requester) {
-        console.log("Trying mobile phone fallback");
-        requesterResponse = await fs.get(
-            `/requesters?query=mobile_phone_number:${encodedPhone}`
-        );
-        requester = requesterResponse.data.requesters?.[0];
-    }
-
-    if (!requester) {
-        console.log("No requester found with phone:", phone);
+    if (!phone) {
+        console.log("No phone number provided");
         return null;
     }
 
-    console.log("Found requester:", requester.id, requester.name);
+    const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`;
 
-    // 3️⃣ Search tickets using requester_id
-    const ticketQuery = `requester_id:${requester.id} AND status:Open AND subject:'Backup'`;
+    console.log("SEARCHING FOR REQUESTER WITH PHONE:", normalizedPhone);
+
+    let requesterResponse;
+    let requester;
+
+    try {
+        requesterResponse = await fs.get(
+            `/requesters?query=work_phone_number:${normalizedPhone}`
+        );
+        requester = requesterResponse.data.requesters?.[0];
+    } catch (err) {
+        console.error("Requester search failed:", err.response?.data);
+        return null;
+    }
+
+    if (!requester) {
+        console.log("Trying mobile phone fallback");
+        try {
+            requesterResponse = await fs.get(
+                `/requesters?query=mobile_phone_number:${normalizedPhone}`
+            );
+            requester = requesterResponse.data.requesters?.[0];
+        } catch (err) {
+            console.error("Mobile phone search failed:", err.response?.data);
+            return null;
+        }
+    }
+
+    if (!requester) {
+        console.log("No requester found");
+        return null;
+    }
+
+    console.log("Found requester:", requester.id);
+
+    const ticketQuery = `requester_id:${requester.id} AND status:2 AND subject:'Backup'`;
 
     const ticketResponse = await fs.get(
-        `/tickets?query="${encodeURIComponent(ticketQuery)}"`
+        `/tickets?query=${ticketQuery}`
     );
 
     const ticket = ticketResponse.data.tickets?.[0] || null;
@@ -68,7 +80,6 @@ async function findBackupTicket(phone) {
 
     return ticket;
 }
-
 
 async function updateBackupTicket(ticketId, reply, from) {
     console.log("ENTERED UPDATE TICKET FUNCTION");
@@ -114,10 +125,10 @@ router.post('/', bodyparser.urlencoded({ extended: false }), async (req, res) =>
 
         res.status(200).send('<Response></Response>');
     } catch (err) {
-        // console.error(err);
-        res.status(500).send();
+        console.error("Webhook error:", err.response?.data || err.message);
+        res.status(200).send('<Response></Response>');
     }
-}
-);
+
+});
 
 module.exports = router;
