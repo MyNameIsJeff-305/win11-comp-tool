@@ -70,7 +70,7 @@ async function findBackupTicket(phone) {
 
     console.log("Type of Requester ID:", typeof requester.id);
 
-    const ticketQuery = `requester_id:${requester.id} AND status:2 AND subject:'Backup'`;
+    const ticketQuery = `requester_id:${requester.id} AND status:2`;
 
     const ticketResponse = await fs.get(
         `/tickets/filter?query=${encodeURIComponent(ticketQuery)}`
