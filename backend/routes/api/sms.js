@@ -73,7 +73,7 @@ async function findBackupTicket(phone) {
     const ticketQuery = `requester_id:${requester.id} AND status:2`;
 
     const ticketResponse = await fs.get(
-        `/tickets/filter?query=${ticketQuery}`
+        `/tickets/filter?query=${encodeURIComponent(ticketQuery)}`
     );
 
     const ticket = ticketResponse.data.tickets?.[0] || null;
