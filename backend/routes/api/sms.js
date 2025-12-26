@@ -40,7 +40,7 @@ async function findBackupTicket(phone) {
 
     try {
         requesterResponse = await fs.get(
-            `/requesters?query=work_phone_number:'${phone}'`
+            `/requesters?query=work_phone_number:'${encodeURIComponent(normalizedPhone)}'`
         );
         requester = requesterResponse.data.requesters?.[0];
     } catch (err) {
