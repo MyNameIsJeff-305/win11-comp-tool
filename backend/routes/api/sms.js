@@ -25,10 +25,21 @@ const fs = axios.create({
 
 async function findBackupTicket(phone) {
     console.log("ENTERED FIND TICKET FUNCTION");
+
+    console.log("SEARCHING FOR THE REQUESTER")
+    //Search for a requester with the phone number
+    const fsRequesterResponse = await fs.get(`/requesters?query=${phone}`)
+    const requester = fsRequesterResponse.data.requesters?.[0];
+    if (!requester) {
+        console.log('No requester found with phone:', phone);
+        return null;
+    }
+    console.log('Found requester:', requester);
+
     const query = `phone:'${phone}' AND status:Open AND subject:'Backup'`;
 
     
-    const { data } = await fs.get(`/tickets/filter?query=${query}`);
+    const { data } = await axios.get()
     
     console.log('Searching for ticket with query:', query, 'Found ticket:', data.tickets?.[0]);
     return data.tickets?.[0] || null;
