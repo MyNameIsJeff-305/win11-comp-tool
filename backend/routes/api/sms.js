@@ -130,10 +130,21 @@ async function findBackupTicket(phone) {
 
     console.log("Found requester:", requester.id);
 
-    // ✅ Ticket filter (Axios params ensures URL encoding for quotes/spaces)
+
     function ticketFilterQuery({ requesterId, status, workspaceId }) {
         return `"requester_id:${Number(requesterId)} AND status:${Number(status)} AND workspace_id:${Number(workspaceId)}"`;
     }
+
+    // ✅ Ticket filter (Axios params ensures URL encoding for quotes/spaces)
+    const ticketResponse = await fs.get('/tickets/filter', {
+        params: {
+            query: ticketFilterQuery({
+                requesterId: requester.id,
+                status: 2,
+                workspaceId: 2
+            })
+        }
+    });
 
     console.log("Ticket search response:", ticketResponse.data);
 
