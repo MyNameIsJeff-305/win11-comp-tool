@@ -5,7 +5,8 @@ const router = express.Router();
 
 function parseBackupReply(message) {
     const match = message.match(/^CONNECTED(\d+)$/i);
-
+    console.log("ENTERED PARSE FUNCTION");
+    console.log('Parsed backup reply:', match);
     if (!match) return null;
 
     return {
@@ -23,16 +24,21 @@ const fs = axios.create({
 });
 
 async function findBackupTicket(phone) {
+    console.log("ENTERED FIND TICKET FUNCTION");
     const query = `phone:'${phone}' AND status:Open AND subject:'Backup'`;
 
+    
     const { data } = await fs.get('/tickets', {
         params: { query }
     });
-
+    
+    console.log('Searching for ticket with query:', query, 'Found ticket:', data.tickets?.[0]);
     return data.tickets?.[0] || null;
 }
 
 async function updateBackupTicket(ticketId, reply, from) {
+    console.log("ENTERED UPDATE TICKET FUNCTION");
+    console.log('Updating ticket ID:', ticketId, 'with reply:', reply, 'from:', from);
     // 1️⃣ Update status → Pending
     await fs.put(`/tickets/${ticketId}`, {
         status: 3 // Pending
