@@ -74,6 +74,8 @@ async function findBackupTicket(phone) {
         `/tickets/filter?query="requester_id:${requester.id} AND status:2"`
     );
 
+    console.log("Ticket search response:", ticketResponse.data);
+
     const ticket = ticketResponse.data.tickets?.[0] || null;
 
     console.log("Found backup ticket:", ticket?.id || "None");
