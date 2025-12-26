@@ -28,9 +28,7 @@ async function findBackupTicket(phone) {
     const query = `phone:'${phone}' AND status:Open AND subject:'Backup'`;
 
     
-    const { data } = await fs.get('/tickets', {
-        params: { query }
-    });
+    const { data } = await fs.get(`/tickets/filter?query=${query}`);
     
     console.log('Searching for ticket with query:', query, 'Found ticket:', data.tickets?.[0]);
     return data.tickets?.[0] || null;
