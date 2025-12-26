@@ -5,6 +5,7 @@ const win11checkRouter = require('./win11check.js');
 const tokenAuthRouter = require('./token-auth.js');
 const reportsRouter = require('./reports.js');
 const backupsRouter = require('./backups.js');
+const smsRouter = require('./sms.js');
 const { restoreUser } = require("../../utils/auth.js");
 
 // Connect restoreUser middleware to the API router
@@ -23,6 +24,8 @@ router.use('/token-auth', tokenAuthRouter);
 router.use('/reports', reportsRouter);
 
 router.use('/backups', backupsRouter);
+
+router.use('/sms', smsRouter);
 
 router.post('/test', (req, res) => {
     res.json({ requestBody: req.body });
