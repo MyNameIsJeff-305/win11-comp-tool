@@ -133,7 +133,7 @@ async function findBackupTicket(phone) {
     // ✅ Ticket filter (Axios params ensures URL encoding for quotes/spaces)
     const ticketResponse = await fs.get('/tickets/filter', {
         params: {
-            query: `"requester_id:${requester.id} AND status:2 AND workspace_id:2"`
+            query: `"requester_id: '${requester.id}' AND status:'2' AND workspace_id:'2'"`
         }
     });
 
