@@ -26,26 +26,49 @@ const fs = axios.create({
 async function findBackupTicket(phone) {
     console.log("ENTERED FIND TICKET FUNCTION");
 
-    console.log("SEARCHING FOR THE REQUESTER")
-    //Search for a requester with the phone number
-    const fsRequesterResponse = await fs.get(`/requesters?query=work_phone_number:${encodeURIComponent(phone)}`);
-    console.log("REQUESTER SEARCH RESPONSE:", fsRequesterResponse.data);
-    const requester = fsRequesterResponse.data.requesters?.[0];
+    // Normalize phone
+    const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+    const encodedPhone = encodeURIComponent(normalizedPhone);
+
+    console.log("SEARCHING FOR REQUESTER WITH PHONE:", normalizedPhone);
+
+    // 1️⃣ Try work phone
+    let requesterResponse = await fs.get(
+        `/requesters?query=work_phone_number:${encodedPhone}`
+    );
+
+    let requester = requesterResponse.data.requesters?.[0];
+
+    // 2️⃣ Fallback to mobile phone
+    if (!requester) {
+        console.log("Trying mobile phone fallback");
+        requesterResponse = await fs.get(
+            `/requesters?query=mobile_phone_number:${encodedPhone}`
+        );
+        requester = requesterResponse.data.requesters?.[0];
+    }
 
     if (!requester) {
-        console.log('No requester found with phone:', phone);
+        console.log("No requester found with phone:", phone);
         return null;
     }
-    console.log('Found requester:', requester);
 
-    const query = `phone:'${phone}' AND status:Open AND subject:'Backup'`;
+    console.log("Found requester:", requester.id, requester.name);
 
-    
-    const { data } = await axios.get()
-    
-    console.log('Searching for ticket with query:', query, 'Found ticket:', data.tickets?.[0]);
-    return data.tickets?.[0] || null;
+    // 3️⃣ Search tickets using requester_id
+    const ticketQuery = `requester_id:${requester.id} AND status:Open AND subject:'Backup'`;
+
+    const ticketResponse = await fs.get(
+        `/tickets?query="${encodeURIComponent(ticketQuery)}"`
+    );
+
+    const ticket = ticketResponse.data.tickets?.[0] || null;
+
+    console.log("Found backup ticket:", ticket?.id || "None");
+
+    return ticket;
 }
+
 
 async function updateBackupTicket(ticketId, reply, from) {
     console.log("ENTERED UPDATE TICKET FUNCTION");
