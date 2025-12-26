@@ -72,6 +72,8 @@ async function findBackupTicket(phone) {
 
     const ticketQuery = `requester_id:${requester.id} AND status:2`;
 
+    console.log("ENCODED TICKET QUERY:", encodeURIComponent(ticketQuery));
+
     const ticketResponse = await fs.get(
         `/tickets/filter?query=${encodeURIComponent(ticketQuery)}`
     );
