@@ -20,8 +20,67 @@ const fs = axios.create({
     auth: {
         username: process.env.FRESHSERVICE_API_KEY,
         password: "X"
-    }
+    },
+    // optional but helpful
+    timeout: 30000
 });
+
+/**
+ * ✅ DEBUG INTERCEPTORS (prints final URL + params + response summary)
+ */
+fs.interceptors.request.use(
+    (config) => {
+        const base = config.baseURL || '';
+        const url = config.url || '';
+        console.log('\n================ FRESHSERVICE REQUEST ================');
+        console.log('METHOD:', (config.method || 'GET').toUpperCase());
+        console.log('URL:', base + url);
+        console.log('PARAMS:', config.params || {});
+        console.log('DATA:', config.data || null);
+        console.log('HEADERS:', {
+            'Content-Type': config.headers?.['Content-Type'] || config.headers?.['content-type'],
+            Accept: config.headers?.Accept || config.headers?.accept
+        });
+        console.log('======================================================\n');
+        return config;
+    },
+    (error) => {
+        console.log('\n================ FRESHSERVICE REQUEST ERROR ================');
+        console.log(error?.message);
+        console.log('===========================================================\n');
+        return Promise.reject(error);
+    }
+);
+
+fs.interceptors.response.use(
+    (response) => {
+        console.log('\n================ FRESHSERVICE RESPONSE ================');
+        console.log('STATUS:', response.status);
+        console.log('URL:', response.config?.baseURL + response.config?.url);
+        console.log('PARAMS:', response.config?.params || {});
+        // don’t dump giant payloads by default
+        if (response.data?.total !== undefined) {
+            console.log('TOTAL:', response.data.total);
+        }
+        console.log('KEYS:', Object.keys(response.data || {}));
+        console.log('======================================================\n');
+        return response;
+    },
+    (error) => {
+        console.log('\n================ FRESHSERVICE RESPONSE ERROR ================');
+        console.log('MESSAGE:', error?.message);
+        if (error?.response) {
+            console.log('STATUS:', error.response.status);
+            console.log('URL:', error.config?.baseURL + error.config?.url);
+            console.log('PARAMS:', error.config?.params || {});
+            console.log('DATA:', error.response.data);
+        } else {
+            console.log('NO RESPONSE OBJECT (network / timeout / DNS / TLS issue)');
+        }
+        console.log('===========================================================\n');
+        return Promise.reject(error);
+    }
+);
 
 async function findBackupTicket(phone) {
     console.log("ENTERED FIND TICKET FUNCTION");
@@ -32,31 +91,34 @@ async function findBackupTicket(phone) {
     }
 
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`;
-
     console.log("SEARCHING FOR REQUESTER WITH PHONE:", normalizedPhone);
 
-    let requesterResponse;
-    let requester;
+    let requester = null;
 
+    // ✅ Requester search (NO encodeURIComponent inside the query!)
     try {
-        requesterResponse = await fs.get(
-            `/requesters?query=work_phone_number:'${encodeURIComponent(normalizedPhone)}'`
-        );
-        requester = requesterResponse.data.requesters?.[0];
+        const requesterResponse = await fs.get('/requesters', {
+            params: {
+                query: `"work_phone_number:'${normalizedPhone}'"`
+            }
+        });
+        requester = requesterResponse.data.requesters?.[0] || null;
     } catch (err) {
-        console.error("Requester search failed:", err.response?.data);
+        console.error("Requester search failed:", err.response?.data || err.message);
         return null;
     }
 
     if (!requester) {
         console.log("Trying mobile phone fallback");
         try {
-            requesterResponse = await fs.get(
-                `/requesters?query=mobile_phone_number:${normalizedPhone}`
-            );
-            requester = requesterResponse.data.requesters?.[0];
+            const requesterResponse = await fs.get('/requesters', {
+                params: {
+                    query: `"mobile_phone_number:'${normalizedPhone}'"`
+                }
+            });
+            requester = requesterResponse.data.requesters?.[0] || null;
         } catch (err) {
-            console.error("Mobile phone search failed:", err.response?.data);
+            console.error("Mobile phone search failed:", err.response?.data || err.message);
             return null;
         }
     }
@@ -68,13 +130,17 @@ async function findBackupTicket(phone) {
 
     console.log("Found requester:", requester.id);
 
-    const ticketResponse = await fs.get(`/tickets/filter?query="workspace_id:2 AND status: 2 AND requester_id:${requester.id}"`);
-
+    // ✅ Ticket filter (Axios params ensures URL encoding for quotes/spaces)
+    const ticketResponse = await fs.get('/tickets/filter', {
+        params: {
+            query: `"requester_id:${requester.id} AND status:2"`,
+            workspace_id: 2 // use 0 for all workspaces
+        }
+    });
 
     console.log("Ticket search response:", ticketResponse.data);
 
     const ticket = ticketResponse.data.tickets?.[0] || null;
-
     console.log("Found backup ticket:", ticket?.id || "None");
 
     return ticket;
@@ -83,12 +149,9 @@ async function findBackupTicket(phone) {
 async function updateBackupTicket(ticketId, reply, from) {
     console.log("ENTERED UPDATE TICKET FUNCTION");
     console.log('Updating ticket ID:', ticketId, 'with reply:', reply, 'from:', from);
-    // 1️⃣ Update status → Pending
-    await fs.put(`/tickets/${ticketId}`, {
-        status: 3 // Pending
-    });
 
-    // 2️⃣ Add private note
+    await fs.put(`/tickets/${ticketId}`, { status: 3 }); // Pending
+
     await fs.post(`/tickets/${ticketId}/notes`, {
         body: `
 📩 Backup SMS Reply Received
@@ -114,8 +177,8 @@ async function processBackupReply({ from, body }) {
 
 router.post('/', bodyparser.urlencoded({ extended: false }), async (req, res) => {
     try {
-        const from = req.body.From;        // Client phone
-        const body = req.body.Body?.trim(); // SMS text
+        const from = req.body.From;
+        const body = req.body.Body?.trim();
 
         console.log('SMS FROM:', from);
         console.log('SMS BODY:', body);
@@ -127,7 +190,6 @@ router.post('/', bodyparser.urlencoded({ extended: false }), async (req, res) =>
         console.error("Webhook error:", err.response?.data || err.message);
         res.status(200).send('<Response></Response>');
     }
-
 });
 
 module.exports = router;
