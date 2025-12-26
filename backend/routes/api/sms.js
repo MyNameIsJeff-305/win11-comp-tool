@@ -148,7 +148,9 @@ async function findBackupTicket(phone) {
 
     console.log("Ticket search response:", ticketResponse.data);
 
-    const ticket = ticketResponse.data.tickets?.[0] || null;
+    //Search for the most recent ticket with "Backup" word in the subject
+    const ticket = ticketResponse.data.tickets?.find(t => t.subject?.includes("Backup")) || null;
+
     console.log("Found backup ticket:", ticket?.id || "None");
 
     return ticket;
