@@ -74,7 +74,7 @@ router.post('/', bodyparser.urlencoded({ extended: false }), async (req, res) =>
 
         res.status(200).send('<Response></Response>');
     } catch (err) {
-        console.error(err);
+        // console.error(err);
         res.status(500).send();
     }
 }
