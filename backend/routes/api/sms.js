@@ -28,7 +28,7 @@ async function findBackupTicket(phone) {
 
     console.log("SEARCHING FOR THE REQUESTER")
     //Search for a requester with the phone number
-    const fsRequesterResponse = await fs.get(`/requesters?query=${phone}`)
+    const fsRequesterResponse = await fs.get(`/requesters?query=work_phone_number:${phone}`)
     const requester = fsRequesterResponse.data.requesters?.[0];
     if (!requester) {
         console.log('No requester found with phone:', phone);
