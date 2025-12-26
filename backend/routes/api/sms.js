@@ -68,7 +68,7 @@ async function findBackupTicket(phone) {
 
     console.log("Found requester:", requester.id);
 
-    const ticketQuery = `requester_id:${requester.id} AND status:2 AND subject:'Backup'`;
+    const ticketQuery = `requester_id:${requester.id}%20AND%20status:2%20AND%20subject:'Backup'`;
 
     const ticketResponse = await fs.get(
         `/tickets?query=${ticketQuery}`
