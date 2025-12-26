@@ -24,43 +24,17 @@ const fs = axios.create({
 });
 
 async function findBackupTicket(phone) {
-    console.log("ENTERED FIND TICKET FUNCTION");
-
-    if (!phone) {
-        console.log("No phone number provided");
-        return null;
-    }
+    if (!phone) return null;
 
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`;
 
     console.log("SEARCHING FOR REQUESTER WITH PHONE:", normalizedPhone);
 
-    let requesterResponse;
-    let requester;
+    const requesterResponse = await fs.get(
+        `/requesters?query=work_phone_number:'${normalizedPhone}'`
+    );
 
-    try {
-        requesterResponse = await fs.get(
-            `/requesters?query=work_phone_number:'${encodeURIComponent(normalizedPhone)}'`
-        );
-        requester = requesterResponse.data.requesters?.[0];
-    } catch (err) {
-        console.error("Requester search failed:", err.response?.data);
-        return null;
-    }
-
-    if (!requester) {
-        console.log("Trying mobile phone fallback");
-        try {
-            requesterResponse = await fs.get(
-                `/requesters?query=mobile_phone_number:${normalizedPhone}`
-            );
-            requester = requesterResponse.data.requesters?.[0];
-        } catch (err) {
-            console.error("Mobile phone search failed:", err.response?.data);
-            return null;
-        }
-    }
-
+    const requester = requesterResponse.data.requesters?.[0];
     if (!requester) {
         console.log("No requester found");
         return null;
@@ -68,12 +42,11 @@ async function findBackupTicket(phone) {
 
     console.log("Found requester:", requester.id);
 
-    console.log("Type of Requester ID:", typeof requester.id);
-
     const ticketQuery = `requester_id:${requester.id} AND status:2 AND subject:'Backup'`;
 
-    const ticketResponse = await fs.get(
-        `/tickets/filter?query=${encodeURIComponent(ticketQuery)}`
+    const ticketResponse = await fs.post(
+        `/tickets/filter`,
+        { query: ticketQuery }
     );
 
     const ticket = ticketResponse.data.tickets?.[0] || null;
@@ -82,6 +55,7 @@ async function findBackupTicket(phone) {
 
     return ticket;
 }
+
 
 async function updateBackupTicket(ticketId, reply, from) {
     console.log("ENTERED UPDATE TICKET FUNCTION");
