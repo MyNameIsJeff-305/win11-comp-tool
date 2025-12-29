@@ -5,8 +5,8 @@ const router = express.Router();
 const { HDDCon } = require('../../db/models');
 
 //Get This month using moment.js
-const moment = require('moment');
-const thisMonth = moment().format('MMMM YYYY');
+const moment = require('moment-timezone');
+const thisMonth = moment().tz('America/New_York').format('MMMM YYYY');
 
 const {
     FRESHSERVICE_API_KEY,
@@ -16,18 +16,28 @@ const {
 
 // Endpoint to check if today is Monday before the first Friday of the month. If so, return true, otherwise false
 router.get('/is-monday-before-first-friday', (req, res) => {
-    const today = moment();
-    const firstFriday = moment().startOf('month').day(5); // 5 = Friday
+    const tz = req.query.tz || 'America/New_York';
 
-    // If the first day of the month is a Friday, the Monday is in the previous month
-    if (firstFriday.date() > 7) {
-        firstFriday.add(7, 'days');
+    const today = moment().tz(tz).startOf('day');
+
+    // Must be Monday
+    if (today.day() !== 1) {
+        return res.json({ isMondayBeforeFirstFriday: false, today: today.format('YYYY-MM-DD'), tz });
     }
 
-    const isMondayBeforeFirstFriday =
-        today.day() === 1 && today.isBefore(firstFriday);
+    // Friday of the same week (Monday + 4 days)
+    const fridayThisWeek = today.clone().add(4, 'days');
 
-    res.json({ isMondayBeforeFirstFriday });
+    // It's the "first Friday of the month" if it's a Friday and its date is 1..7
+    const isMondayBeforeFirstFriday =
+        fridayThisWeek.day() === 5 && fridayThisWeek.date() <= 7;
+
+    return res.json({
+        isMondayBeforeFirstFriday,
+        today: today.format('YYYY-MM-DD'),
+        firstFridayCandidate: fridayThisWeek.format('YYYY-MM-DD'),
+        tz
+    });
 });
 
 router.post('/create-backup-tickets', async (req, res) => {
