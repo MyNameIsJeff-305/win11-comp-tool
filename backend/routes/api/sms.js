@@ -3,178 +3,190 @@ const bodyparser = require('body-parser');
 const axios = require('axios');
 const router = express.Router();
 
+/* ======================================================
+   PARSE SMS REPLY
+   ====================================================== */
 function parseBackupReply(message) {
-    const match = message.match(/^CONNECTED(\d+)$/i);
     console.log("ENTERED PARSE FUNCTION");
-    console.log('Parsed backup reply:', match);
-    if (!match) return null;
 
-    return {
-        status: 'CONNECTED',
-        hddNumber: match[1]
-    };
+    if (!message) return null;
+
+    const normalized = message.trim().toUpperCase();
+
+    // CONNECTED{number}
+    const connectedMatch = normalized.match(/^CONNECTED(\d+)$/);
+    if (connectedMatch) {
+        console.log('Parsed reply: CONNECTED');
+        return {
+            action: 'CONNECTED',
+            hddNumber: connectedMatch[1]
+        };
+    }
+
+    // REMOVED
+    if (normalized === 'REMOVED') {
+        console.log('Parsed reply: REMOVED');
+        return {
+            action: 'REMOVED'
+        };
+    }
+
+    console.log('Invalid SMS reply:', message);
+    return null;
 }
 
+/* ======================================================
+   FRESHSERVICE AXIOS INSTANCE
+   ====================================================== */
 const fs = axios.create({
     baseURL: `https://${process.env.FRESHSERVICE_DOMAIN}.freshservice.com/api/v2`,
     auth: {
         username: process.env.FRESHSERVICE_API_KEY,
-        password: "X"
+        password: 'X'
     },
-    // optional but helpful
     timeout: 30000
 });
 
-/**
- * ✅ DEBUG INTERCEPTORS (prints final URL + params + response summary)
- */
-fs.interceptors.request.use(
-    (config) => {
-        const base = config.baseURL || '';
-        const url = config.url || '';
-        console.log('\n================ FRESHSERVICE REQUEST ================');
-        console.log('METHOD:', (config.method || 'GET').toUpperCase());
-        console.log('URL:', base + url);
-        console.log('PARAMS:', config.params || {});
-        console.log('DATA:', config.data || null);
-        console.log('HEADERS:', {
-            'Content-Type': config.headers?.['Content-Type'] || config.headers?.['content-type'],
-            Accept: config.headers?.Accept || config.headers?.accept
-        });
-        console.log('======================================================\n');
-        return config;
-    },
-    (error) => {
-        console.log('\n================ FRESHSERVICE REQUEST ERROR ================');
-        console.log(error?.message);
-        console.log('===========================================================\n');
-        return Promise.reject(error);
-    }
-);
+/* ======================================================
+   DEBUG INTERCEPTORS
+   ====================================================== */
+fs.interceptors.request.use(config => {
+    console.log('\n================ FRESHSERVICE REQUEST ================');
+    console.log('METHOD:', (config.method || 'GET').toUpperCase());
+    console.log('URL:', config.baseURL + config.url);
+    console.log('PARAMS:', config.params || {});
+    console.log('DATA:', config.data || null);
+    console.log('======================================================\n');
+    return config;
+});
 
 fs.interceptors.response.use(
-    (response) => {
+    response => {
         console.log('\n================ FRESHSERVICE RESPONSE ================');
         console.log('STATUS:', response.status);
-        console.log('URL:', response.config?.baseURL + response.config?.url);
-        console.log('PARAMS:', response.config?.params || {});
-        // don’t dump giant payloads by default
-        if (response.data?.total !== undefined) {
-            console.log('TOTAL:', response.data.total);
-        }
+        console.log('URL:', response.config.baseURL + response.config.url);
         console.log('KEYS:', Object.keys(response.data || {}));
         console.log('======================================================\n');
         return response;
     },
-    (error) => {
-        console.log('\n================ FRESHSERVICE RESPONSE ERROR ================');
-        console.log('MESSAGE:', error?.message);
-        if (error?.response) {
+    error => {
+        console.log('\n================ FRESHSERVICE ERROR ================');
+        console.log('MESSAGE:', error.message);
+        if (error.response) {
             console.log('STATUS:', error.response.status);
-            console.log('URL:', error.config?.baseURL + error.config?.url);
-            console.log('PARAMS:', error.config?.params || {});
             console.log('DATA:', error.response.data);
-        } else {
-            console.log('NO RESPONSE OBJECT (network / timeout / DNS / TLS issue)');
         }
-        console.log('===========================================================\n');
+        console.log('======================================================\n');
         return Promise.reject(error);
     }
 );
 
+/* ======================================================
+   FIND BACKUP TICKET
+   ====================================================== */
 async function findBackupTicket(phone) {
     console.log("ENTERED FIND TICKET FUNCTION");
 
-    if (!phone) {
-        console.log("No phone number provided");
-        return null;
-    }
+    if (!phone) return null;
 
     const normalizedPhone = phone.startsWith('+') ? phone : `+${phone}`;
-    console.log("SEARCHING FOR REQUESTER WITH PHONE:", normalizedPhone);
+    console.log("SEARCHING REQUESTER:", normalizedPhone);
 
     let requester = null;
 
-    // ✅ Requester search (NO encodeURIComponent inside the query!)
     try {
-        const requesterResponse = await fs.get('/requesters', {
+        const res = await fs.get('/requesters', {
             params: {
                 query: `"work_phone_number:'${normalizedPhone}'"`
             }
         });
-        requester = requesterResponse.data.requesters?.[0] || null;
-    } catch (err) {
-        console.error("Requester search failed:", err.response?.data || err.message);
-        return null;
-    }
+        requester = res.data.requesters?.[0] || null;
+    } catch {}
 
     if (!requester) {
-        console.log("Trying mobile phone fallback");
         try {
-            const requesterResponse = await fs.get('/requesters', {
+            const res = await fs.get('/requesters', {
                 params: {
                     query: `"mobile_phone_number:'${normalizedPhone}'"`
                 }
             });
-            requester = requesterResponse.data.requesters?.[0] || null;
-        } catch (err) {
-            console.error("Mobile phone search failed:", err.response?.data || err.message);
-            return null;
-        }
+            requester = res.data.requesters?.[0] || null;
+        } catch {}
     }
 
     if (!requester) {
-        console.log("No requester found");
+        console.log('No requester found');
         return null;
     }
 
-    console.log("Found requester:", requester.id);
+    console.log('Requester found:', requester.id);
 
+    const ticketQuery = `"requester_id:${requester.id} AND status:2 AND workspace_id:2"`;
 
-    function ticketFilterQuery({ requesterId, status, workspaceId }) {
-        return `"requester_id:${Number(requesterId)} AND status:${Number(status)} AND workspace_id:${Number(workspaceId)}"`;
-    }
-
-    // ✅ Ticket filter (Axios params ensures URL encoding for quotes/spaces)
-    const ticketResponse = await fs.get('/tickets/filter', {
-        params: {
-            query: ticketFilterQuery({
-                requesterId: requester.id,
-                status: 2,
-                workspaceId: 2
-            })
-        }
+    const ticketRes = await fs.get('/tickets/filter', {
+        params: { query: ticketQuery }
     });
 
-    console.log("Ticket search response:", ticketResponse.data);
+    const ticket = ticketRes.data.tickets?.find(t =>
+        t.subject?.toLowerCase().includes('backup')
+    ) || null;
 
-    //Search for the most recent ticket with "Backup" word in the subject
-    const ticket = ticketResponse.data.tickets?.find(t => t.subject?.includes("Backup")) || null;
-
-    console.log("Found backup ticket:", ticket?.id || "None");
+    console.log('Backup ticket found:', ticket?.id || 'None');
 
     return ticket;
 }
 
-async function updateBackupTicket(ticketId, reply, from) {
-    console.log("ENTERED UPDATE TICKET FUNCTION");
-    console.log('Updating ticket ID:', ticketId, 'with reply:', reply, 'from:', from);
+/* ======================================================
+   TICKET UPDATES
+   ====================================================== */
+async function markTicketPending(ticketId, reply, from) {
+    console.log('MARKING TICKET PENDING:', ticketId);
 
-    await fs.put(`/tickets/${ticketId}`, { status: 3 }); // Pending
+    await fs.put(`/tickets/${ticketId}`, { status: 3 });
 
     await fs.post(`/tickets/${ticketId}/notes`, {
+        private: true,
         body: `
 📩 Backup SMS Reply Received
 
 From: ${from}
-Reply: ${reply.status}${reply.hddNumber}
+Reply: CONNECTED${reply.hddNumber}
 
-Marked as PENDING automatically.
-    `,
-        private: true
+Ticket marked as PENDING automatically.
+        `
     });
 }
 
+async function markTicketRemoved(ticketId, from) {
+    console.log('MARKING TICKET CLOSED:', ticketId);
+
+    await fs.put(`/tickets/${ticketId}`, {
+        status: 5,
+        resolution: `
+📦 Backup Device Removed
+
+Client confirmed via SMS that the backup device was REMOVED.
+
+Ticket closed automatically.
+        `
+    });
+
+    await fs.post(`/tickets/${ticketId}/notes`, {
+        private: true,
+        body: `
+📩 Backup SMS Reply Received
+
+From: ${from}
+Reply: REMOVED
+
+Ticket CLOSED automatically.
+        `
+    });
+}
+
+/* ======================================================
+   PROCESS SMS
+   ====================================================== */
 async function processBackupReply({ from, body }) {
     const reply = parseBackupReply(body);
     if (!reply) return;
@@ -182,24 +194,33 @@ async function processBackupReply({ from, body }) {
     const ticket = await findBackupTicket(from);
     if (!ticket) return;
 
-    await updateBackupTicket(ticket.id, reply, from);
+    if (reply.action === 'CONNECTED') {
+        await markTicketPending(ticket.id, reply, from);
+    }
+
+    if (reply.action === 'REMOVED') {
+        await markTicketRemoved(ticket.id, from);
+    }
 }
 
+/* ======================================================
+   TWILIO WEBHOOK
+   ====================================================== */
 router.post('/', bodyparser.urlencoded({ extended: false }), async (req, res) => {
     try {
         const from = req.body.From;
-        const body = req.body.Body?.trim();
+        const body = req.body.Body;
 
         console.log('SMS FROM:', from);
         console.log('SMS BODY:', body);
 
         await processBackupReply({ from, body });
-
-        res.status(200).send('<Response></Response>');
     } catch (err) {
-        console.error("Webhook error:", err.response?.data || err.message);
-        res.status(200).send('<Response></Response>');
+        console.error('Webhook error:', err.message);
     }
+
+    // Twilio requires 200 OK
+    res.status(200).send('<Response></Response>');
 });
 
 module.exports = router;
