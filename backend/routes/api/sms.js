@@ -163,13 +163,6 @@ async function markTicketRemoved(ticketId, from) {
 
     await fs.put(`/tickets/${ticketId}`, {
         status: 5,
-        resolution: `
-📦 Backup Device Removed
-
-Client confirmed via SMS that the backup device was REMOVED.
-
-Ticket closed automatically.
-        `
     });
 
     await fs.post(`/tickets/${ticketId}/notes`, {
