@@ -122,8 +122,8 @@ async function findBackupTicket(phone, action) {
     console.log('Requester found:', requester.id);
 
     const ticketQuery = action === 'CONNECTED'
-        ? `requester_id:${requester.id} AND status:2 AND subject:"Backup Device Connected"`
-        : `requester_id:${requester.id} AND status:4 AND subject:"Backup Device Connected"`;
+        ? `"requester_id:${requester.id} AND status:2 AND workspace_id:2"`
+        : `"requester_id:${requester.id} AND status:4 AND workspace_id:2"`;
     const ticketRes = await fs.get('/tickets/filter', {
         params: { query: ticketQuery }
     });
