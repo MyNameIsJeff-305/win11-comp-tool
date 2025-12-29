@@ -84,7 +84,7 @@ fs.interceptors.response.use(
 /* ======================================================
    FIND BACKUP TICKET
    ====================================================== */
-async function findBackupTicket(phone) {
+async function findBackupTicket(phone, action) {
     console.log("ENTERED FIND TICKET FUNCTION");
 
     if (!phone) return null;
@@ -121,8 +121,9 @@ async function findBackupTicket(phone) {
 
     console.log('Requester found:', requester.id);
 
-    const ticketQuery = `"requester_id:${requester.id} AND status:2 AND workspace_id:2"`;
-
+    const ticketQuery = action === 'CONNECTED'
+        ? `requester_id:${requester.id} AND status:2 AND subject:"Backup Device Connected"`
+        : `requester_id:${requester.id} AND status:4 AND subject:"Backup Device Connected"`;
     const ticketRes = await fs.get('/tickets/filter', {
         params: { query: ticketQuery }
     });
@@ -191,7 +192,7 @@ async function processBackupReply({ from, body }) {
     const reply = parseBackupReply(body);
     if (!reply) return;
 
-    const ticket = await findBackupTicket(from);
+    const ticket = await findBackupTicket(from, reply.action);
     if (!ticket) return;
 
     if (reply.action === 'CONNECTED') {
