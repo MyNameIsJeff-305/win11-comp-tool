@@ -124,7 +124,7 @@ This ticket was created automatically.
                     department_id: company.id,
                     priority: 2,
                     status: 2, // Open
-                    source: 2, // Automation / API
+                    source: 10, // Slack
                     fr_due_by: nextFriday,
                     due_by: nextFriday,
                     custom_fields: {
