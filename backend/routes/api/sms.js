@@ -14,7 +14,12 @@ function parseBackupReply(message) {
     const normalized = message.trim().toUpperCase();
 
     // CONNECTED{number}
-    const connectedMatch = normalized.match(/^CONNECTED(\d+)$/);
+    const connectedMatch = normalized.match(/^CONNECTED(\d+)$/) ||
+                           normalized.match(/^CONECTED(\d+)$/) ||
+                           normalized.match(/^Connected(\d+)$/) ||
+                           normalized.match(/^Conected(\d+)$/) ||
+                           normalized.match(/^connected(\d+)$/) ||
+                           normalized.match(/^conected(\d+)$/);
     if (connectedMatch) {
         console.log('Parsed reply: CONNECTED');
         return {
@@ -188,7 +193,12 @@ async function processBackupReply({ from, body }) {
     const ticket = await findBackupTicket(from, reply.action);
     if (!ticket) return;
 
-    if (reply.action === 'CONNECTED' || reply.action === 'Connected' || reply.action === 'connected' || reply.action === 'CONECTED' || reply.action === 'conected' || reply.action === 'Conected') {
+    if (reply.action === 'CONNECTED' || 
+        reply.action === 'Connected' || 
+        reply.action === 'connected' || 
+        reply.action === 'CONECTED' || 
+        reply.action === 'conected' || 
+        reply.action === 'Conected') {
         await markTicketPending(ticket.id, reply, from);
     }
 
