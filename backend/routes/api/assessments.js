@@ -3,6 +3,7 @@ const router = express.Router();
 
 router.post('/export-to-freshservice', (req, res) => {
     console.log('Received assessment data:', req.body);
+    console.log('...');
     // Process the assessment data and export to Freshservice
     res.json({ message: 'Assessment data exported to Freshservice successfully' });
 });
