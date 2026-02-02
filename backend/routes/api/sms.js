@@ -188,7 +188,7 @@ async function processBackupReply({ from, body }) {
     const ticket = await findBackupTicket(from, reply.action);
     if (!ticket) return;
 
-    if (reply.action === 'CONNECTED') {
+    if (reply.action === 'CONNECTED' || reply.action === 'Connected' || reply.action === 'connected' || reply.action === 'CONECTED' || reply.action === 'conected' || reply.action === 'Conected') {
         await markTicketPending(ticket.id, reply, from);
     }
 
