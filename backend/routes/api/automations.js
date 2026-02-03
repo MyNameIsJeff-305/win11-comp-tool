@@ -67,7 +67,7 @@ router.post('/ticket-filtering-sa', async (req, res) => {
             });
         }
     } catch (error) {
-        console.error("Error in /ticket-filtering-sa:", error);
+        console.error("Error in /ticket-filtering-sa");
         return res.status(500).json({ error: 'Internal server error' });
     }
 
