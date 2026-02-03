@@ -7,6 +7,7 @@ const reportsRouter = require('./reports.js');
 const backupsRouter = require('./backups.js');
 const smsRouter = require('./sms.js');
 const assessmentsRouter = require('./assessments.js');
+const automationsRouter = require('./automations.js');
 const { restoreUser } = require("../../utils/auth.js");
 
 // Connect restoreUser middleware to the API router
@@ -29,6 +30,8 @@ router.use('/backups', backupsRouter);
 router.use('/sms', smsRouter);
 
 router.use('/assessments', assessmentsRouter);
+
+router.use('/automations', automationsRouter);
 
 router.post('/test', (req, res) => {
     res.json({ requestBody: req.body });
