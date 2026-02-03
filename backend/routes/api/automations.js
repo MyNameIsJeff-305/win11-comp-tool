@@ -47,7 +47,7 @@ router.post('/ticket-filtering-sa', async (req, res) => {
         const ticket = await getTicket(ticketId);
         const company = await getCompany(ticket.department_id);
 
-        const userSAValue = company.custom_fields.service_agreement_sa;
+        const userSAValue = company.custom_fields?.service_agreement_sa;
 
         if(userSAValue === 'Under SA') {
             updateTicket(ticketId, {
