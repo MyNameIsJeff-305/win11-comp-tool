@@ -29,8 +29,9 @@ async function getTicket(ticketId) {
 }
 
 async function getCompany(companyId) {
+    console.log("Fetching company with ID:", companyId);
     const { data } = await fs.get(`/departments/${companyId}`);
-    return data.company;
+    return data.department;
 }
 
 function updateTicket(ticketId, updatePayload) {
@@ -45,7 +46,10 @@ router.post('/ticket-filtering-sa', async (req, res) => {
         console.log("Body received:", ticketId);
 
         const ticket = await getTicket(ticketId);
+        console.log("Ticket Department ID:", ticket.department_id);
+        
         const company = await getCompany(ticket.department_id);
+        console.log("Company Custom Fields:", company.custom_fields);
 
         const userSAValue = company.custom_fields?.service_agreement_sa;
 
