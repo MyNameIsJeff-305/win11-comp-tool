@@ -15,8 +15,10 @@ const app = express();
 
 app.use(morgan('dev'));
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+
+// ✅ Increase payload limits to avoid "request entity too large"
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 if (!isProduction) {
     app.use(cors());
