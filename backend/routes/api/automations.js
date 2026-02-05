@@ -112,7 +112,7 @@ router.post('/ticket-filtering-sa', async (req, res) => {
 
         console.log("Body received:", ticketId);
 
-        const ticket = await getTicket(ticketId);
+        const ticket = await getTicket(parseInt(ticketId));
         console.log("Ticket Department ID:", ticket.department_id);
 
         const company = await getCompany(ticket.department_id);
