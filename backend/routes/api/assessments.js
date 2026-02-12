@@ -127,7 +127,6 @@ function headerCard(title, createdAt, responseId) {
       <div style="margin-top:12px; border-left:4px solid #FFFFFF59; padding:10px 12px; border-radius:12px; background:#FFFFFF0D;">
         <strong>Captured:</strong> ${escapeHtml(createdAt || 'N/A')}
         <br><strong>Response ID:</strong> ${escapeHtml(responseId || 'N/A')}
-        <br><strong>Status:</strong> Draft
       </div>
     </div>
   `;
@@ -286,7 +285,7 @@ function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId })
                     // If firewall is "Yes" but no firewall details, still render one empty card for visibility
                     cards.push(`
             <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
-              <div style="font-size:14.5pt; font-weight:800; margin:0 0 6px 0;">Firewall 1</div>
+              <div style="font-size:16pt; font-weight:800; margin:0 0 6px 0;">Firewall 1</div>
               <div style="opacity:.85;">No firewall details provided.</div>
             </div>
           `);
