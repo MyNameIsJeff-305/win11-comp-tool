@@ -45,8 +45,6 @@ function findFieldByLabelIndexed(fields, baseLabel, index) {
     const base = String(baseLabel).trim();
     const i = Number(index);
 
-    // Match common variations you might have in Tally repeats:
-    // "Brand (2)", "Brand 2", "Brand #2", "Brand - 2", "Brand (Firewall 2)"
     const patterns = [
         new RegExp(`^${escapeRegExp(base)}\\s*\\(${i}\\)$`, 'i'),
         new RegExp(`^${escapeRegExp(base)}\\s+${i}$`, 'i'),
@@ -90,7 +88,6 @@ function normalizeFieldValue(field) {
     }
 
     if (field.type === 'FILE_UPLOAD') {
-        // raw file objects; handled separately for images
         const files = toArray(field.value).filter(Boolean);
         return files.length ? files : null;
     }
@@ -102,7 +99,7 @@ function normalizeFieldValue(field) {
     return field.value != null && field.value !== '' ? String(field.value) : null;
 }
 
-/** "Yes"/"No" check for dropdowns (works with "Yes", "YES", etc.) */
+/** "Yes"/"No" check for dropdowns */
 function isYes(value) {
     if (value == null) return false;
     return String(value).trim().toLowerCase() === 'yes';
@@ -157,7 +154,6 @@ function sectionCard(number, title, subtitle, innerHtml) {
 }
 
 function twoColTable(rows) {
-    // rows: [{label, valueHtml}]
     const body = rows
         .filter(r => r && r.valueHtml != null && String(r.valueHtml).trim() !== '')
         .map(r => `
@@ -190,7 +186,6 @@ function imageBlockFromFileUpload(files) {
     const fileArr = toArray(files).filter(Boolean);
     if (!fileArr.length) return '';
 
-    // Render as images (clickable)
     return fileArr.map(f => {
         const name = escapeHtml(f.name || 'image');
         const url = escapeHtml(f.url || '');
@@ -205,7 +200,7 @@ function imageBlockFromFileUpload(files) {
     }).join('');
 }
 
-/* ---------------- Assessment HTML (TEST SCOPE: only requested elements) ---------------- */
+/* ---------------- Assessment HTML (TEST SCOPE) ---------------- */
 
 function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId }) {
     let n = 1;
@@ -243,13 +238,17 @@ function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId })
     const hasFirewallVal = normalizeFieldValue(findFieldByLabel(fields, 'Does the Office have a Firewall?'));
     const hasFirewall = isYes(hasFirewallVal);
 
-    // Build firewall cards if firewall exists.
-    // This supports either:
-    // - labels without suffix for Firewall 1, plus "(2)" etc for repeats
-    // - or labels like "Firewall 2 Brand" etc (handled by indexed finder patterns)
-    const firewallCardsHtml = (() => {
-        if (!hasFirewall) return '';
+    const htmlParts = [];
+    htmlParts.push(headerCard(title, createdAt, responseId));
 
+    htmlParts.push(sectionCard(String(n++), 'General Information', 'Client/site basics', twoColTable(generalRows)));
+    htmlParts.push(sectionCard(String(n++), 'Contact Information', 'Primary contact details', twoColTable(contactRows)));
+
+    // Main Network section content (without firewall cards)
+    htmlParts.push(sectionCard(String(n++), 'Main Network Information', 'ISP and addressing', twoColTable(mainNetworkRows)));
+
+    // ✅ Firewalls MUST be a real section card (not just an H3 line)
+    if (hasFirewall) {
         const cards = [];
         for (let i = 1; i <= 10; i++) {
             const brandF = i === 1
@@ -276,13 +275,11 @@ function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId })
             const model = normalizeFieldValue(modelF);
             const serial = normalizeFieldValue(serialF);
             const loc = normalizeFieldValue(locationF);
-            const uploads = normalizeFieldValue(uploadF); // array of file objects or null
+            const uploads = normalizeFieldValue(uploadF);
 
-            // Stop when we don't find any meaningful data for this index.
             const hasAny = Boolean(brand || model || serial || loc || (uploads && uploads.length));
             if (!hasAny) {
                 if (i === 1) {
-                    // If firewall is "Yes" but no firewall details, still render one empty card for visibility
                     cards.push(`
             <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
               <div style="font-size:16pt; font-weight:800; margin:0 0 6px 0;">Firewall 1</div>
@@ -311,36 +308,15 @@ function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId })
       `);
         }
 
-        // Wrap all firewall cards under the Firewall section content block
-        return `
-      <div>
-        ${cards.join('')}
-      </div>
-    `;
-    })();
-
-    const htmlParts = [];
-
-    htmlParts.push(headerCard(title, createdAt, responseId));
-
-    htmlParts.push(
-        sectionCard(String(n++), 'General Information', 'Client/site basics', twoColTable(generalRows))
-    );
-
-    htmlParts.push(
-        sectionCard(String(n++), 'Contact Information', 'Primary contact details', twoColTable(contactRows))
-    );
-
-    // Main Network Information (and optionally firewall cards appended inside same section per your spec)
-    const mainNetworkInner = `
-    ${twoColTable(mainNetworkRows)}
-    ${hasFirewall ? `<div style="margin-top:14px; font-size:15pt; font-weight:800;">Firewalls</div>` : ''}
-    ${firewallCardsHtml}
-  `;
-
-    htmlParts.push(
-        sectionCard(String(n++), 'Main Network Information', 'ISP and addressing', mainNetworkInner)
-    );
+        htmlParts.push(
+            sectionCard(
+                String(n++),
+                'Firewalls',
+                'Firewall devices included in this assessment',
+                cards.join('') || `<div style="opacity:.85;">No firewall details provided.</div>`
+            )
+        );
+    }
 
     return wrapper(htmlParts.join(''));
 }
