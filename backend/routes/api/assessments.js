@@ -40,35 +40,6 @@ function findFieldByLabel(fields, label) {
     return (fields || []).find(f => String(f?.label || '').trim().toLowerCase() === target) || null;
 }
 
-function escapeRegExp(s) {
-    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/** Find a field by label for a specific group index (supports common suffix patterns). */
-function findFieldByLabelIndexed(fields, baseLabel, index, deviceNameForPattern) {
-    const base = String(baseLabel).trim();
-    const i = Number(index);
-    const dev = deviceNameForPattern ? String(deviceNameForPattern).trim().toLowerCase() : null;
-
-    // Works with:
-    // "Brand (2)", "Brand 2", "Brand #2", "Brand - 2", "Brand (Firewall 2)"
-    // "Switch 2 Brand", "Access Point 3 Model", etc.
-    const patterns = [
-        new RegExp(`^${escapeRegExp(base)}\\s*\\(${i}\\)$`, 'i'),
-        new RegExp(`^${escapeRegExp(base)}\\s+${i}$`, 'i'),
-        new RegExp(`^${escapeRegExp(base)}\\s*#\\s*${i}$`, 'i'),
-        new RegExp(`^${escapeRegExp(base)}\\s*[-–—]\\s*${i}$`, 'i'),
-        dev ? new RegExp(`^${escapeRegExp(base)}\\s*\\(\\s*${escapeRegExp(dev)}\\s*${i}\\s*\\)$`, 'i') : null,
-        dev ? new RegExp(`^${escapeRegExp(dev)}\\s*${i}\\s+${escapeRegExp(base)}$`, 'i') : null,
-        dev ? new RegExp(`^${escapeRegExp(dev)}\\s*#?\\s*${i}\\s*[-–—:]?\\s*${escapeRegExp(base)}$`, 'i') : null,
-    ].filter(Boolean);
-
-    return (fields || []).find(f => {
-        const lab = String(f?.label || '').trim();
-        return patterns.some(re => re.test(lab));
-    }) || null;
-}
-
 /** Resolve option IDs to option text for DROPDOWN/MULTIPLE_CHOICE. */
 function resolveOptionValues(field) {
     const selectedIds = toArray(field?.value).filter(Boolean);
@@ -87,16 +58,19 @@ function resolveOptionValues(field) {
 function normalizeFieldValue(field) {
     if (!field) return null;
 
+    // DROPDOWN / MULTIPLE_CHOICE -> option text
     if (field.type === 'DROPDOWN' || field.type === 'MULTIPLE_CHOICE') {
         const resolved = resolveOptionValues(field);
         return resolved ? String(resolved) : null;
     }
 
+    // FILE_UPLOAD -> array of files (handled as images)
     if (field.type === 'FILE_UPLOAD') {
         const files = toArray(field.value).filter(Boolean);
         return files.length ? files : null;
     }
 
+    // arrays -> join
     if (Array.isArray(field.value)) {
         return field.value.length ? field.value : null;
     }
@@ -104,14 +78,34 @@ function normalizeFieldValue(field) {
     return field.value != null && field.value !== '' ? String(field.value) : null;
 }
 
-/** "Yes"/"No" check for dropdowns */
+/** "Yes"/"No" check (case-insensitive). */
 function isYes(value) {
     if (value == null) return false;
     return String(value).trim().toLowerCase() === 'yes';
 }
 
+/** Finds the index of the next field (from startIdx) whose label matches label (case-insensitive). */
+function indexOfLabel(fields, label, startIdx = 0) {
+    const target = String(label).trim().toLowerCase();
+    for (let i = startIdx; i < (fields || []).length; i++) {
+        const lab = String(fields[i]?.label || '').trim().toLowerCase();
+        if (lab === target) return i;
+    }
+    return -1;
+}
+
+/** Finds the index of the next gate question: label starts with "Does the Office have" (case-insensitive). */
+function indexOfNextGate(fields, startIdx = 0) {
+    for (let i = startIdx; i < (fields || []).length; i++) {
+        const lab = String(fields[i]?.label || '').trim().toLowerCase();
+        if (lab.startsWith('does the office have')) return i;
+    }
+    return -1;
+}
+
 function getClientNameFromPayload(payload) {
     const fields = payload?.data?.fields || [];
+    // Per your rule: fields[0] is Client Name
     return (fields && fields[0] && fields[0].value) ? String(fields[0].value) : 'Unknown Client';
 }
 
@@ -129,7 +123,6 @@ function headerCard(title, createdAt, responseId) {
       <div style="margin-top:12px; border-left:4px solid #FFFFFF59; padding:10px 12px; border-radius:12px; background:#FFFFFF0D;">
         <strong>Captured:</strong> ${escapeHtml(createdAt || 'N/A')}
         <br><strong>Response ID:</strong> ${escapeHtml(responseId || 'N/A')}
-        <br><strong>Status:</strong> Draft
       </div>
     </div>
   `;
@@ -160,6 +153,7 @@ function sectionCard(number, title, subtitle, innerHtml) {
 }
 
 function twoColTable(rows) {
+    // rows: [{label, valueHtml}]
     const body = rows
         .filter(r => r && r.valueHtml != null && String(r.valueHtml).trim() !== '')
         .map(r => `
@@ -188,6 +182,7 @@ function valueAsHtml(val) {
     return escapeHtml(String(val));
 }
 
+/** Render FILE_UPLOAD as images (clickable). */
 function imageBlockFromFileUpload(files) {
     const fileArr = toArray(files).filter(Boolean);
     if (!fileArr.length) return '';
@@ -197,8 +192,7 @@ function imageBlockFromFileUpload(files) {
         const url = escapeHtml(f.url || '');
         return `
       <div style="margin-top:12px;">
-        <div style="font-weight:800; margin-bottom:6px; opacity:.9;">${name}</div>
-        <a href="${url}" target="_blank" rel="noreferrer">
+        <a href="${url}" target="_blank" rel="noreferrer" style="text-decoration:none;">
           <img src="${url}" alt="${name}" style="max-width:100%; height:auto; border-radius:18px; border:1px solid #FFFFFF2E; display:block;" />
         </a>
       </div>
@@ -206,94 +200,119 @@ function imageBlockFromFileUpload(files) {
     }).join('');
 }
 
-/* ---------------- Generic device section builder ---------------- */
+function deviceCardHtml(deviceTitle, rows, imagesHtml) {
+    return `
+    <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
+      <div style="font-size:14.5pt; font-weight:800; margin:0 0 10px 0;">${escapeHtml(deviceTitle)}</div>
+      ${twoColTable(rows)}
+      ${imagesHtml || ''}
+    </div>
+  `;
+}
 
-function buildDeviceSection({
-    number,
-    sectionTitle,
-    sectionSubtitle,
-    fields,
-    deviceKeyName, // used in label matching patterns (e.g., "firewall", "switch", "access point")
-    gateLabel,     // e.g., "Does the Office have a Firewall?"
-    gateYesRequired = true,
-    baseLabels,    // ordered list of base labels to include per device
-    imageLabel,    // optional label for file upload per device
-    maxDevices = 10
-}) {
-    // Gate (optional)
-    if (gateLabel) {
-        const gateVal = normalizeFieldValue(findFieldByLabel(fields, gateLabel));
-        const gatedOk = gateYesRequired ? isYes(gateVal) : !isYes(gateVal);
-        if (!gatedOk) return null;
-    }
+/* ---------------- Extraction: repeated device blocks ---------------- */
 
-    const cards = [];
+/**
+ * Extract repeated device groups based on:
+ * - gateLabel: "Does the Office have X?"
+ * - repeatLabel: "Is there another X?"
+ * The device fields are the segment between gate and repeat (per device).
+ * Stops when repeat != Yes.
+ *
+ * It also avoids creating cards for pure-null placeholder segments.
+ */
+function extractRepeatedGroups(fields, cfg) {
+    const gateIdx = indexOfLabel(fields, cfg.gateLabel, 0);
+    if (gateIdx === -1) return [];
 
-    for (let i = 1; i <= maxDevices; i++) {
+    const gateVal = normalizeFieldValue(fields[gateIdx]);
+    if (!isYes(gateVal)) return [];
+
+    let cursor = gateIdx + 1;
+    let deviceNumber = 1;
+    const groups = [];
+
+    while (cursor < fields.length) {
+        // segment ends at repeatLabel OR next gate question (safety)
+        const repeatIdx = indexOfLabel(fields, cfg.repeatLabel, cursor);
+        const nextGateIdx = indexOfNextGate(fields, cursor);
+
+        let segmentEnd = -1;
+        if (repeatIdx !== -1) segmentEnd = repeatIdx;
+        else if (nextGateIdx !== -1) segmentEnd = nextGateIdx;
+        else segmentEnd = fields.length;
+
+        // Build values by scanning this segment for expected labels
+        const segment = fields.slice(cursor, segmentEnd);
+
         const rows = [];
+        let imagesHtml = '';
 
-        // For each base label, try first unsuffixed (for i=1), then indexed
-        for (const baseLabel of baseLabels) {
-            const fieldObj = i === 1
-                ? (findFieldByLabel(fields, baseLabel) || findFieldByLabelIndexed(fields, baseLabel, 1, deviceKeyName))
-                : findFieldByLabelIndexed(fields, baseLabel, i, deviceKeyName);
-
-            const val = normalizeFieldValue(fieldObj);
-            if (val == null) continue;
-
-            // FILE_UPLOAD should not go into the table here (we handle images separately)
-            if (Array.isArray(val) && fieldObj?.type === 'FILE_UPLOAD') continue;
-
-            rows.push({ label: baseLabel, valueHtml: valueAsHtml(val) });
+        // Optional “name” field used for some devices (e.g., Server Name / Station Name)
+        if (cfg.nameLabel) {
+            const f = findFieldByLabel(segment, cfg.nameLabel);
+            const v = normalizeFieldValue(f);
+            if (v) rows.push({ label: cfg.nameLabel, valueHtml: valueAsHtml(v) });
         }
 
-        const uploadObj = imageLabel
-            ? (i === 1
-                ? (findFieldByLabel(fields, imageLabel) || findFieldByLabelIndexed(fields, imageLabel, 1, deviceKeyName))
-                : findFieldByLabelIndexed(fields, imageLabel, i, deviceKeyName))
-            : null;
+        for (const label of (cfg.tableLabels || [])) {
+            const f = findFieldByLabel(segment, label);
+            const v = normalizeFieldValue(f);
 
-        const uploads = uploadObj ? normalizeFieldValue(uploadObj) : null;
-        const imagesHtml = uploads ? imageBlockFromFileUpload(uploads) : '';
+            // images handled separately
+            if (label === cfg.imageLabel) continue;
 
-        const hasAny = rows.length > 0 || Boolean(imagesHtml);
-        if (!hasAny) {
-            if (i === 1) {
-                cards.push(`
-          <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
-            <div style="font-size:16pt; font-weight:800; margin:0 0 6px 0;">${escapeHtml(sectionTitle)} 1</div>
-            <div style="opacity:.85;">No ${escapeHtml(sectionTitle.toLowerCase())} details provided.</div>
-          </div>
-        `);
+            if (v != null && String(v).trim() !== '') {
+                rows.push({ label, valueHtml: valueAsHtml(v) });
             }
-            break;
         }
 
-        const deviceTable = twoColTable(rows);
+        if (cfg.imageLabel) {
+            const imgField = findFieldByLabel(segment, cfg.imageLabel);
+            const uploads = normalizeFieldValue(imgField);
+            if (uploads && uploads.length) {
+                imagesHtml = imageBlockFromFileUpload(uploads);
+            }
+        }
 
-        cards.push(`
-      <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
-        <div style="font-size:14.5pt; font-weight:800; margin:0 0 10px 0;">${escapeHtml(sectionTitle)} ${i}</div>
-        ${deviceTable}
-        ${imagesHtml}
-      </div>
-    `);
+        // Determine if this device has any actual data (rows or images)
+        const hasAny = (rows.length > 0) || Boolean(imagesHtml);
+
+        // If it's purely placeholders (nulls), stop (this matches your “limit 5 but only 2 exist” case)
+        if (!hasAny) break;
+
+        const deviceTitle = `${cfg.deviceTitleSingular} ${deviceNumber}`;
+        groups.push({ deviceTitle, rows, imagesHtml });
+
+        // Decide whether to continue
+        const repeatField = (repeatIdx !== -1 && repeatIdx < fields.length) ? fields[repeatIdx] : null;
+        const repeatVal = normalizeFieldValue(repeatField);
+
+        if (repeatIdx !== -1 && isYes(repeatVal)) {
+            cursor = repeatIdx + 1;
+            deviceNumber += 1;
+            continue;
+        }
+
+        // If repeat is missing or not yes => stop
+        break;
     }
 
-    return sectionCard(
-        String(number),
-        sectionTitle + 's',
-        sectionSubtitle,
-        cards.join('') || `<div style="opacity:.85;">No details provided.</div>`
-    );
+    return groups;
 }
 
 /* ---------------- Assessment HTML (FULL) ---------------- */
 
 function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
     let n = 1;
+    const parts = [];
 
-    // General Information
+    parts.push(headerCard(title, createdAt, responseId));
+
+    // --- SINGLE-VALUE SECTIONS (core) ---
+    const hasStaticIpVal = normalizeFieldValue(findFieldByLabel(fields, 'Has Static IP?'));
+    const hasStatic = isYes(hasStaticIpVal);
+
     const generalRows = [
         { label: 'Client Name', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Client Name'))) },
         { label: 'Client Address', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Client Address'))) },
@@ -302,17 +321,12 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
         { label: 'ZIP Code', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'ZIP Code'))) },
     ];
 
-    // Contact Information
     const contactRows = [
         { label: 'Primary Contact Name', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Primary Contact Name'))) },
         { label: 'Phone Number', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Phone Number'))) },
         { label: 'Email', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Email'))) },
         { label: 'Location Name', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Location Name'))) },
     ];
-
-    // Main Network Information (+ conditional Static IP)
-    const hasStaticIpVal = normalizeFieldValue(findFieldByLabel(fields, 'Has Static IP?'));
-    const hasStatic = isYes(hasStaticIpVal);
 
     const mainNetworkRows = [
         { label: 'Internet Service Provider (ISP)', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Internet Service Provider'))) },
@@ -322,70 +336,187 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
         { label: 'Gateway', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Gateway'))) },
     ];
 
-    const htmlParts = [];
-    htmlParts.push(headerCard(title, createdAt, responseId));
+    parts.push(sectionCard(String(n++), 'General Information', 'Client/site basics', twoColTable(generalRows)));
+    parts.push(sectionCard(String(n++), 'Contact Information', 'Primary contact details', twoColTable(contactRows)));
+    parts.push(sectionCard(String(n++), 'Main Network Information', 'ISP and addressing', twoColTable(mainNetworkRows)));
 
-    htmlParts.push(sectionCard(String(n++), 'General Information', 'Client/site basics', twoColTable(generalRows)));
-    htmlParts.push(sectionCard(String(n++), 'Contact Information', 'Primary contact details', twoColTable(contactRows)));
-    htmlParts.push(sectionCard(String(n++), 'Main Network Information', 'ISP and addressing', twoColTable(mainNetworkRows)));
+    // --- DEVICE SECTIONS (repeated blocks) ---
+    const deviceConfigs = [
+        {
+            sectionTitle: 'Firewalls',
+            sectionSubtitle: 'Perimeter security devices',
+            gateLabel: 'Does the Office have a Firewall?',
+            repeatLabel: 'Is there another Firewall?',
+            deviceTitleSingular: 'Firewall',
+            tableLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
+            imageLabel: 'Upload a picture of the Firewall',
+        },
+        {
+            sectionTitle: 'Servers',
+            sectionSubtitle: 'On-prem servers',
+            gateLabel: 'Does the Office have Servers?',
+            repeatLabel: 'Is there another Server?',
+            deviceTitleSingular: 'Server',
+            nameLabel: 'Server Name',
+            tableLabels: [
+                'Brand',
+                'Model',
+                'User',
+                'Password',
+                'It was sold and installed by SMART Solutions?',
+                'IP Type',
+                'IP Address',
+                'Tag Number',
+                'Serial Number',
+                'MAC Address',
+                'Operative System (OS)',
+                'Location'
+            ],
+            imageLabel: 'Upload a picture of the server',
+        },
+        {
+            sectionTitle: 'Access Points',
+            sectionSubtitle: 'Wireless access points',
+            gateLabel: 'Does the Office have Access Points?',
+            repeatLabel: 'Is there another Access Point?',
+            deviceTitleSingular: 'Access Point',
+            tableLabels: ['Brand', 'Model', 'IP Type', 'IP Address', 'Location'],
+            imageLabel: 'Upload a picture of the Access Point',
+        },
+        {
+            sectionTitle: 'IP Phones',
+            sectionSubtitle: 'VoIP endpoints',
+            gateLabel: 'Does the Office have IP Phones?',
+            repeatLabel: 'Is there another IP Phone?',
+            deviceTitleSingular: 'IP Phone',
+            tableLabels: ['Brand', 'Model', 'IP Type', 'IP Address', 'Location'],
+            imageLabel: 'Upload a picture of the IP Phone',
+        },
+        {
+            sectionTitle: 'Work Stations (Computers)',
+            sectionSubtitle: 'Endpoints used by staff',
+            gateLabel: 'Does the Office have Work Stations (Computers)?',
+            repeatLabel: 'Is there another Work Station?',
+            deviceTitleSingular: 'Work Station',
+            nameLabel: 'Station Name',
+            tableLabels: [
+                'Brand',
+                'Model',
+                'Form Factor',
+                'IP Type',
+                'IP Address',
+                'Tag Number',
+                'Serial Number',
+                'MAC Address',
+                'Operative System (OS)',
+                'Location'
+            ],
+            imageLabel: 'Upload a picture of the Station',
+        },
+        {
+            sectionTitle: 'Network Switches',
+            sectionSubtitle: 'Switching infrastructure',
+            gateLabel: 'Does the Office have Network Switches?',
+            repeatLabel: 'Is there another Network Switch?',
+            deviceTitleSingular: 'Network Switch',
+            tableLabels: ['Brand', 'Model', 'Managed Switch?', 'Amount of Ports', 'Location'],
+            imageLabel: 'Upload a picture of the Network Switch',
+        },
+        {
+            sectionTitle: 'Printers',
+            sectionSubtitle: 'Printing devices',
+            gateLabel: 'Does the Office have Printers?',
+            repeatLabel: 'Is there another Printer?',
+            deviceTitleSingular: 'Printer',
+            tableLabels: [
+                'Brand',
+                'Model',
+                'Printer Type',
+                'Cartridge Model',
+                'Toner Model',
+                'Ink Type',
+                'Printer Connection',
+                'IP Type',
+                'IP Address',
+                'Location'
+            ],
+            imageLabel: 'Upload a picture of the Printer',
+        },
+        {
+            sectionTitle: 'Scanners',
+            sectionSubtitle: 'Scanning devices',
+            gateLabel: 'Does the Office have Scanners?',
+            repeatLabel: 'Is there another Scanner?',
+            deviceTitleSingular: 'Scanner',
+            tableLabels: ['Brand', 'Model', 'Scanner Connection', 'IP Type', 'IP Address', 'Location'],
+            imageLabel: 'Upload a picture of the Scanner',
+        },
+        {
+            sectionTitle: 'NAS Stations',
+            sectionSubtitle: 'Network-attached storage devices',
+            gateLabel: 'Does the Office have NAS Stations?',
+            repeatLabel: 'Is there another NAS Station?',
+            deviceTitleSingular: 'NAS Station',
+            tableLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
+            imageLabel: 'Upload a picture of the NAS Station',
+        },
+        {
+            sectionTitle: 'Payment Terminals',
+            sectionSubtitle: 'Point-of-sale / payment devices',
+            gateLabel: 'Does the Office have Payment Terminals?',
+            repeatLabel: 'Is there another Payment Terminal?',
+            deviceTitleSingular: 'Payment Terminal',
+            tableLabels: ['Brand', 'Model', 'IP Type', 'IP Address', 'Location'],
+            imageLabel: 'Upload a picture of the Payment Terminal',
+        },
+        {
+            sectionTitle: 'CCTV Systems',
+            sectionSubtitle: 'Security camera systems',
+            gateLabel: 'Does the Office have CCTV Systems?',
+            repeatLabel: 'Is there another CCTV System?',
+            deviceTitleSingular: 'CCTV System',
+            tableLabels: ['Type', 'Brand', 'Model', 'Amount of Cameras', 'Location'],
+            imageLabel: 'Upload a picture of the CCTV System',
+        },
+        {
+            sectionTitle: 'Dental Management Software',
+            sectionSubtitle: 'Practice management applications',
+            gateLabel: 'Does the Office have Dental Management Software?',
+            repeatLabel: 'Is there another Dental Management Software?',
+            deviceTitleSingular: 'Dental Management Software',
+            tableLabels: ['Name', 'Server Name', 'IP Type', 'IP Address'],
+            imageLabel: null,
+        },
+        {
+            sectionTitle: 'Imaging Software',
+            sectionSubtitle: 'Radiology / imaging applications',
+            gateLabel: 'Does the Office have Imaging Software?',
+            repeatLabel: 'Is there another Imaging Software?',
+            deviceTitleSingular: 'Imaging Software',
+            tableLabels: ['Name', 'Server Name', 'IP Type', 'IP Address'],
+            imageLabel: null,
+        },
+    ];
 
-    // Firewalls (gated)
-    const firewallsSection = buildDeviceSection({
-        number: n++,
-        sectionTitle: 'Firewall',
-        sectionSubtitle: 'Firewall devices included in this assessment',
-        fields,
-        deviceKeyName: 'firewall',
-        gateLabel: 'Does the Office have a Firewall?',
-        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
-        imageLabel: 'Upload a picture of the Firewall',
-        maxDevices: 10
-    });
-    if (firewallsSection) htmlParts.push(firewallsSection);
+    for (const cfg of deviceConfigs) {
+        const groups = extractRepeatedGroups(fields, cfg);
+        if (!groups.length) continue;
 
-    // Switches (example gate label — adjust if your form uses a different label)
-    const switchesSection = buildDeviceSection({
-        number: n++,
-        sectionTitle: 'Switch',
-        sectionSubtitle: 'Switch devices included in this assessment',
-        fields,
-        deviceKeyName: 'switch',
-        gateLabel: 'Does the Office have a Switch?', // <-- rename if needed
-        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
-        imageLabel: 'Upload a picture of the Switch', // <-- rename if needed
-        maxDevices: 10
-    });
-    if (switchesSection) htmlParts.push(switchesSection);
+        const cardsHtml = groups
+            .map(g => deviceCardHtml(g.deviceTitle, g.rows, g.imagesHtml))
+            .join('');
 
-    // Access Points (example gate label — adjust if your form uses a different label)
-    const apsSection = buildDeviceSection({
-        number: n++,
-        sectionTitle: 'Access Point',
-        sectionSubtitle: 'Wireless access points included in this assessment',
-        fields,
-        deviceKeyName: 'access point',
-        gateLabel: 'Does the Office have Access Points?', // <-- rename if needed
-        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
-        imageLabel: 'Upload a picture of the Access Point', // <-- rename if needed
-        maxDevices: 20
-    });
-    if (apsSection) htmlParts.push(apsSection);
+        parts.push(
+            sectionCard(
+                String(n++),
+                cfg.sectionTitle,
+                cfg.sectionSubtitle || '',
+                cardsHtml
+            )
+        );
+    }
 
-    // Stations (example gate label — adjust if your form uses a different label)
-    const stationsSection = buildDeviceSection({
-        number: n++,
-        sectionTitle: 'Station',
-        sectionSubtitle: 'Workstations / endpoints included in this assessment',
-        fields,
-        deviceKeyName: 'station',
-        gateLabel: 'Do you have Stations?', // <-- rename if needed
-        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
-        imageLabel: 'Upload a picture of the Station', // <-- rename if needed
-        maxDevices: 50
-    });
-    if (stationsSection) htmlParts.push(stationsSection);
-
-    return wrapper(htmlParts.join(''));
+    return wrapper(parts.join(''));
 }
 
 /* ---------------- Route ---------------- */
