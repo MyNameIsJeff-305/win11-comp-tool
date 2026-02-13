@@ -40,28 +40,33 @@ function findFieldByLabel(fields, label) {
     return (fields || []).find(f => String(f?.label || '').trim().toLowerCase() === target) || null;
 }
 
+function escapeRegExp(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Find a field by label for a specific group index (supports common suffix patterns). */
-function findFieldByLabelIndexed(fields, baseLabel, index) {
+function findFieldByLabelIndexed(fields, baseLabel, index, deviceNameForPattern) {
     const base = String(baseLabel).trim();
     const i = Number(index);
+    const dev = deviceNameForPattern ? String(deviceNameForPattern).trim().toLowerCase() : null;
 
+    // Works with:
+    // "Brand (2)", "Brand 2", "Brand #2", "Brand - 2", "Brand (Firewall 2)"
+    // "Switch 2 Brand", "Access Point 3 Model", etc.
     const patterns = [
         new RegExp(`^${escapeRegExp(base)}\\s*\\(${i}\\)$`, 'i'),
         new RegExp(`^${escapeRegExp(base)}\\s+${i}$`, 'i'),
         new RegExp(`^${escapeRegExp(base)}\\s*#\\s*${i}$`, 'i'),
         new RegExp(`^${escapeRegExp(base)}\\s*[-–—]\\s*${i}$`, 'i'),
-        new RegExp(`^${escapeRegExp(base)}\\s*\\(\\s*firewall\\s*${i}\\s*\\)$`, 'i'),
-        new RegExp(`^firewall\\s*${i}\\s+${escapeRegExp(base)}$`, 'i'),
-    ];
+        dev ? new RegExp(`^${escapeRegExp(base)}\\s*\\(\\s*${escapeRegExp(dev)}\\s*${i}\\s*\\)$`, 'i') : null,
+        dev ? new RegExp(`^${escapeRegExp(dev)}\\s*${i}\\s+${escapeRegExp(base)}$`, 'i') : null,
+        dev ? new RegExp(`^${escapeRegExp(dev)}\\s*#?\\s*${i}\\s*[-–—:]?\\s*${escapeRegExp(base)}$`, 'i') : null,
+    ].filter(Boolean);
 
     return (fields || []).find(f => {
         const lab = String(f?.label || '').trim();
         return patterns.some(re => re.test(lab));
     }) || null;
-}
-
-function escapeRegExp(s) {
-    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** Resolve option IDs to option text for DROPDOWN/MULTIPLE_CHOICE. */
@@ -124,6 +129,7 @@ function headerCard(title, createdAt, responseId) {
       <div style="margin-top:12px; border-left:4px solid #FFFFFF59; padding:10px 12px; border-radius:12px; background:#FFFFFF0D;">
         <strong>Captured:</strong> ${escapeHtml(createdAt || 'N/A')}
         <br><strong>Response ID:</strong> ${escapeHtml(responseId || 'N/A')}
+        <br><strong>Status:</strong> Draft
       </div>
     </div>
   `;
@@ -200,9 +206,91 @@ function imageBlockFromFileUpload(files) {
     }).join('');
 }
 
-/* ---------------- Assessment HTML (TEST SCOPE) ---------------- */
+/* ---------------- Generic device section builder ---------------- */
 
-function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId }) {
+function buildDeviceSection({
+    number,
+    sectionTitle,
+    sectionSubtitle,
+    fields,
+    deviceKeyName, // used in label matching patterns (e.g., "firewall", "switch", "access point")
+    gateLabel,     // e.g., "Does the Office have a Firewall?"
+    gateYesRequired = true,
+    baseLabels,    // ordered list of base labels to include per device
+    imageLabel,    // optional label for file upload per device
+    maxDevices = 10
+}) {
+    // Gate (optional)
+    if (gateLabel) {
+        const gateVal = normalizeFieldValue(findFieldByLabel(fields, gateLabel));
+        const gatedOk = gateYesRequired ? isYes(gateVal) : !isYes(gateVal);
+        if (!gatedOk) return null;
+    }
+
+    const cards = [];
+
+    for (let i = 1; i <= maxDevices; i++) {
+        const rows = [];
+
+        // For each base label, try first unsuffixed (for i=1), then indexed
+        for (const baseLabel of baseLabels) {
+            const fieldObj = i === 1
+                ? (findFieldByLabel(fields, baseLabel) || findFieldByLabelIndexed(fields, baseLabel, 1, deviceKeyName))
+                : findFieldByLabelIndexed(fields, baseLabel, i, deviceKeyName);
+
+            const val = normalizeFieldValue(fieldObj);
+            if (val == null) continue;
+
+            // FILE_UPLOAD should not go into the table here (we handle images separately)
+            if (Array.isArray(val) && fieldObj?.type === 'FILE_UPLOAD') continue;
+
+            rows.push({ label: baseLabel, valueHtml: valueAsHtml(val) });
+        }
+
+        const uploadObj = imageLabel
+            ? (i === 1
+                ? (findFieldByLabel(fields, imageLabel) || findFieldByLabelIndexed(fields, imageLabel, 1, deviceKeyName))
+                : findFieldByLabelIndexed(fields, imageLabel, i, deviceKeyName))
+            : null;
+
+        const uploads = uploadObj ? normalizeFieldValue(uploadObj) : null;
+        const imagesHtml = uploads ? imageBlockFromFileUpload(uploads) : '';
+
+        const hasAny = rows.length > 0 || Boolean(imagesHtml);
+        if (!hasAny) {
+            if (i === 1) {
+                cards.push(`
+          <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
+            <div style="font-size:16pt; font-weight:800; margin:0 0 6px 0;">${escapeHtml(sectionTitle)} 1</div>
+            <div style="opacity:.85;">No ${escapeHtml(sectionTitle.toLowerCase())} details provided.</div>
+          </div>
+        `);
+            }
+            break;
+        }
+
+        const deviceTable = twoColTable(rows);
+
+        cards.push(`
+      <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
+        <div style="font-size:14.5pt; font-weight:800; margin:0 0 10px 0;">${escapeHtml(sectionTitle)} ${i}</div>
+        ${deviceTable}
+        ${imagesHtml}
+      </div>
+    `);
+    }
+
+    return sectionCard(
+        String(number),
+        sectionTitle + 's',
+        sectionSubtitle,
+        cards.join('') || `<div style="opacity:.85;">No details provided.</div>`
+    );
+}
+
+/* ---------------- Assessment HTML (FULL) ---------------- */
+
+function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
     let n = 1;
 
     // General Information
@@ -234,89 +322,68 @@ function buildAssessmentHtml_TestScope({ title, fields, createdAt, responseId })
         { label: 'Gateway', valueHtml: valueAsHtml(normalizeFieldValue(findFieldByLabel(fields, 'Gateway'))) },
     ];
 
-    // Firewall conditional
-    const hasFirewallVal = normalizeFieldValue(findFieldByLabel(fields, 'Does the Office have a Firewall?'));
-    const hasFirewall = isYes(hasFirewallVal);
-
     const htmlParts = [];
     htmlParts.push(headerCard(title, createdAt, responseId));
 
     htmlParts.push(sectionCard(String(n++), 'General Information', 'Client/site basics', twoColTable(generalRows)));
     htmlParts.push(sectionCard(String(n++), 'Contact Information', 'Primary contact details', twoColTable(contactRows)));
-
-    // Main Network section content (without firewall cards)
     htmlParts.push(sectionCard(String(n++), 'Main Network Information', 'ISP and addressing', twoColTable(mainNetworkRows)));
 
-    // ✅ Firewalls MUST be a real section card (not just an H3 line)
-    if (hasFirewall) {
-        const cards = [];
-        for (let i = 1; i <= 10; i++) {
-            const brandF = i === 1
-                ? (findFieldByLabel(fields, 'Brand') || findFieldByLabelIndexed(fields, 'Brand', 1))
-                : findFieldByLabelIndexed(fields, 'Brand', i);
+    // Firewalls (gated)
+    const firewallsSection = buildDeviceSection({
+        number: n++,
+        sectionTitle: 'Firewall',
+        sectionSubtitle: 'Firewall devices included in this assessment',
+        fields,
+        deviceKeyName: 'firewall',
+        gateLabel: 'Does the Office have a Firewall?',
+        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
+        imageLabel: 'Upload a picture of the Firewall',
+        maxDevices: 10
+    });
+    if (firewallsSection) htmlParts.push(firewallsSection);
 
-            const modelF = i === 1
-                ? (findFieldByLabel(fields, 'Model') || findFieldByLabelIndexed(fields, 'Model', 1))
-                : findFieldByLabelIndexed(fields, 'Model', i);
+    // Switches (example gate label — adjust if your form uses a different label)
+    const switchesSection = buildDeviceSection({
+        number: n++,
+        sectionTitle: 'Switch',
+        sectionSubtitle: 'Switch devices included in this assessment',
+        fields,
+        deviceKeyName: 'switch',
+        gateLabel: 'Does the Office have a Switch?', // <-- rename if needed
+        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
+        imageLabel: 'Upload a picture of the Switch', // <-- rename if needed
+        maxDevices: 10
+    });
+    if (switchesSection) htmlParts.push(switchesSection);
 
-            const serialF = i === 1
-                ? (findFieldByLabel(fields, 'Serial Number') || findFieldByLabelIndexed(fields, 'Serial Number', 1))
-                : findFieldByLabelIndexed(fields, 'Serial Number', i);
+    // Access Points (example gate label — adjust if your form uses a different label)
+    const apsSection = buildDeviceSection({
+        number: n++,
+        sectionTitle: 'Access Point',
+        sectionSubtitle: 'Wireless access points included in this assessment',
+        fields,
+        deviceKeyName: 'access point',
+        gateLabel: 'Does the Office have Access Points?', // <-- rename if needed
+        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
+        imageLabel: 'Upload a picture of the Access Point', // <-- rename if needed
+        maxDevices: 20
+    });
+    if (apsSection) htmlParts.push(apsSection);
 
-            const locationF = i === 1
-                ? (findFieldByLabel(fields, 'Location') || findFieldByLabelIndexed(fields, 'Location', 1))
-                : findFieldByLabelIndexed(fields, 'Location', i);
-
-            const uploadF = i === 1
-                ? (findFieldByLabel(fields, 'Upload a picture of the Firewall') || findFieldByLabelIndexed(fields, 'Upload a picture of the Firewall', 1))
-                : findFieldByLabelIndexed(fields, 'Upload a picture of the Firewall', i);
-
-            const brand = normalizeFieldValue(brandF);
-            const model = normalizeFieldValue(modelF);
-            const serial = normalizeFieldValue(serialF);
-            const loc = normalizeFieldValue(locationF);
-            const uploads = normalizeFieldValue(uploadF);
-
-            const hasAny = Boolean(brand || model || serial || loc || (uploads && uploads.length));
-            if (!hasAny) {
-                if (i === 1) {
-                    cards.push(`
-            <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
-              <div style="font-size:16pt; font-weight:800; margin:0 0 6px 0;">Firewall 1</div>
-              <div style="opacity:.85;">No firewall details provided.</div>
-            </div>
-          `);
-                }
-                break;
-            }
-
-            const fwTable = twoColTable([
-                { label: 'Brand', valueHtml: valueAsHtml(brand) },
-                { label: 'Model', valueHtml: valueAsHtml(model) },
-                { label: 'Serial Number', valueHtml: valueAsHtml(serial) },
-                { label: 'Location', valueHtml: valueAsHtml(loc) },
-            ]);
-
-            const fwImages = uploads ? imageBlockFromFileUpload(uploads) : '';
-
-            cards.push(`
-        <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
-          <div style="font-size:14.5pt; font-weight:800; margin:0 0 10px 0;">Firewall ${i}</div>
-          ${fwTable}
-          ${fwImages}
-        </div>
-      `);
-        }
-
-        htmlParts.push(
-            sectionCard(
-                String(n++),
-                'Firewalls',
-                'Firewall devices included in this assessment',
-                cards.join('') || `<div style="opacity:.85;">No firewall details provided.</div>`
-            )
-        );
-    }
+    // Stations (example gate label — adjust if your form uses a different label)
+    const stationsSection = buildDeviceSection({
+        number: n++,
+        sectionTitle: 'Station',
+        sectionSubtitle: 'Workstations / endpoints included in this assessment',
+        fields,
+        deviceKeyName: 'station',
+        gateLabel: 'Do you have Stations?', // <-- rename if needed
+        baseLabels: ['Brand', 'Model', 'Serial Number', 'Location'],
+        imageLabel: 'Upload a picture of the Station', // <-- rename if needed
+        maxDevices: 50
+    });
+    if (stationsSection) htmlParts.push(stationsSection);
 
     return wrapper(htmlParts.join(''));
 }
@@ -331,7 +398,7 @@ router.post('/export-to-freshservice', async (req, res) => {
         const clientName = getClientNameFromPayload(payload);
         const articleTitle = `Network Assessment ${clientName}`;
 
-        const descriptionHtml = buildAssessmentHtml_TestScope({
+        const descriptionHtml = buildAssessmentHtml_Full({
             title: articleTitle,
             fields,
             createdAt: payload?.createdAt || payload?.data?.createdAt,
