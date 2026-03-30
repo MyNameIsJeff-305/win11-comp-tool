@@ -103,6 +103,17 @@ function updateTicket(ticketId, updatePayload) {
     return axiosWithRetry(() => fs.put(`/tickets/${ticketId}`, updatePayload));
 }
 
+async function createFolder(name, category_id, visibility, approval_settings) {
+    const payload = {
+        name,
+        category_id,
+        visibility,
+        approval_settings
+    };
+    const { data } = await fs.post('solutions/folders', payload);
+    return data;
+}
+
 // --------- Endpoints ---------
 
 // Search for the value of User SA on companies to filter views in Freshservice
@@ -260,5 +271,32 @@ router.post('/check-for-all-the-tickets-and-update-sa', async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+//Add folders in bulk to Freshservice
+router.post('/add-folders-in-bulk', async (req, res) => {
+    try {
+        const { folderNames } = req.body;
+        const category_id = 39000004944;
+        const visibility = 3;
+        const approval_settings = {
+            approval_type: 1,
+            approver_ids: [39000009883, 39000010003]
+        };
+
+        for (const folderName of folderNames) {
+            try {
+                await createFolder(folderName, category_id, visibility, approval_settings);
+            } catch (err) {
+                console.error(`Error creating folder ${folderName}:`, err.response?.data);
+            }
+        }
+
+        return res.json({ message: 'Folders created successfully' });
+
+    } catch (error) {
+        console.error("Error in /add-folders-in-bulk:", error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+})
 
 module.exports = router;

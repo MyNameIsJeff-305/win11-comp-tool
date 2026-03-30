@@ -64,13 +64,12 @@ function normalizeFieldValue(field) {
         return resolved ? String(resolved) : null;
     }
 
-    // FILE_UPLOAD -> array of files (handled as images)
+    // FILE_UPLOAD -> array of files
     if (field.type === 'FILE_UPLOAD') {
         const files = toArray(field.value).filter(Boolean);
         return files.length ? files : null;
     }
 
-    // arrays -> join
     if (Array.isArray(field.value)) {
         return field.value.length ? field.value : null;
     }
@@ -153,7 +152,6 @@ function sectionCard(number, title, subtitle, innerHtml) {
 }
 
 function twoColTable(rows) {
-    // rows: [{label, valueHtml}]
     const body = rows
         .filter(r => r && r.valueHtml != null && String(r.valueHtml).trim() !== '')
         .map(r => `
@@ -191,14 +189,19 @@ function imageBlockFromFileUpload(files) {
         const name = escapeHtml(f.name || 'image');
         const url = escapeHtml(f.url || '');
         return `
-      <div style="margin-top:12px;">
-        <a href="${url}" target="_blank" rel="noreferrer" style="text-decoration:none;">
-          <img src="${url}" alt="${name}" style="max-width:100%; height:auto; border-radius:18px; border:1px solid #FFFFFF2E; display:block;" />
-        </a>
-      </div>
-    `;
+            <div style="margin-top:12px;">
+            <a href="${url}" target="_blank" rel="noreferrer" style="text-decoration:none;">
+                    <img
+                        src="${url}"
+                        alt="${name}"
+                        style="width:600px; height:400px; object-fit:cover; border-radius:18px; border:1px solid #FFFFFF2E; display:block; max-width:100%;"
+                    />
+                </a>
+            </div>
+        `;
     }).join('');
 }
+
 
 function deviceCardHtml(deviceTitle, rows, imagesHtml) {
     return `
@@ -216,10 +219,8 @@ function deviceCardHtml(deviceTitle, rows, imagesHtml) {
  * Extract repeated device groups based on:
  * - gateLabel: "Does the Office have X?"
  * - repeatLabel: "Is there another X?"
- * The device fields are the segment between gate and repeat (per device).
- * Stops when repeat != Yes.
- *
- * It also avoids creating cards for pure-null placeholder segments.
+ * Segment for each device = fields between cursor and repeatLabel (or next gate).
+ * Stops when repeat != Yes OR when a segment has no real data (placeholder null blocks).
  */
 function extractRepeatedGroups(fields, cfg) {
     const gateIdx = indexOfLabel(fields, cfg.gateLabel, 0);
@@ -233,7 +234,6 @@ function extractRepeatedGroups(fields, cfg) {
     const groups = [];
 
     while (cursor < fields.length) {
-        // segment ends at repeatLabel OR next gate question (safety)
         const repeatIdx = indexOfLabel(fields, cfg.repeatLabel, cursor);
         const nextGateIdx = indexOfNextGate(fields, cursor);
 
@@ -242,13 +242,11 @@ function extractRepeatedGroups(fields, cfg) {
         else if (nextGateIdx !== -1) segmentEnd = nextGateIdx;
         else segmentEnd = fields.length;
 
-        // Build values by scanning this segment for expected labels
         const segment = fields.slice(cursor, segmentEnd);
 
         const rows = [];
         let imagesHtml = '';
 
-        // Optional “name” field used for some devices (e.g., Server Name / Station Name)
         if (cfg.nameLabel) {
             const f = findFieldByLabel(segment, cfg.nameLabel);
             const v = normalizeFieldValue(f);
@@ -256,11 +254,10 @@ function extractRepeatedGroups(fields, cfg) {
         }
 
         for (const label of (cfg.tableLabels || [])) {
+            if (label === cfg.imageLabel) continue;
+
             const f = findFieldByLabel(segment, label);
             const v = normalizeFieldValue(f);
-
-            // images handled separately
-            if (label === cfg.imageLabel) continue;
 
             if (v != null && String(v).trim() !== '') {
                 rows.push({ label, valueHtml: valueAsHtml(v) });
@@ -270,22 +267,21 @@ function extractRepeatedGroups(fields, cfg) {
         if (cfg.imageLabel) {
             const imgField = findFieldByLabel(segment, cfg.imageLabel);
             const uploads = normalizeFieldValue(imgField);
-            if (uploads && uploads.length) {
-                imagesHtml = imageBlockFromFileUpload(uploads);
-            }
+            if (uploads && uploads.length) imagesHtml = imageBlockFromFileUpload(uploads);
         }
 
-        // Determine if this device has any actual data (rows or images)
-        const hasAny = (rows.length > 0) || Boolean(imagesHtml);
+        const hasAny = rows.length > 0 || Boolean(imagesHtml);
 
-        // If it's purely placeholders (nulls), stop (this matches your “limit 5 but only 2 exist” case)
+        // Placeholder device blocks -> stop
         if (!hasAny) break;
 
-        const deviceTitle = `${cfg.deviceTitleSingular} ${deviceNumber}`;
-        groups.push({ deviceTitle, rows, imagesHtml });
+        groups.push({
+            deviceTitle: `${cfg.deviceTitleSingular} ${deviceNumber}`,
+            rows,
+            imagesHtml
+        });
 
-        // Decide whether to continue
-        const repeatField = (repeatIdx !== -1 && repeatIdx < fields.length) ? fields[repeatIdx] : null;
+        const repeatField = (repeatIdx !== -1) ? fields[repeatIdx] : null;
         const repeatVal = normalizeFieldValue(repeatField);
 
         if (repeatIdx !== -1 && isYes(repeatVal)) {
@@ -294,11 +290,39 @@ function extractRepeatedGroups(fields, cfg) {
             continue;
         }
 
-        // If repeat is missing or not yes => stop
         break;
     }
 
     return groups;
+}
+
+/* ---------------- Panoramics (place right after Imaging Software) ---------------- */
+
+function buildPanoramicsInnerHtml(fields) {
+    // Match any FILE_UPLOAD field whose label contains "panoramic" (case-insensitive)
+    const panoFields = (fields || []).filter(f => {
+        if (!f) return false;
+        if (f.type !== 'FILE_UPLOAD') return false;
+        const lab = String(f.label || '').toLowerCase();
+        return lab.includes('panoramic');
+    });
+
+    const blocks = panoFields
+        .map(f => {
+            const uploads = normalizeFieldValue(f);
+            if (!uploads || !uploads.length) return null;
+
+            return `
+        <div style="border:1px solid #FFFFFF2E; border-radius:18px; padding:14px; background:#FFFFFF0A; margin-top:12px;">
+          <div style="font-size:14.5pt; font-weight:800; margin:0 0 10px 0;">${escapeHtml(f.label || 'Panoramic')}</div>
+          ${imageBlockFromFileUpload(uploads)}
+        </div>
+      `;
+        })
+        .filter(Boolean)
+        .join('');
+
+    return blocks || null;
 }
 
 /* ---------------- Assessment HTML (FULL) ---------------- */
@@ -309,7 +333,7 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
 
     parts.push(headerCard(title, createdAt, responseId));
 
-    // --- SINGLE-VALUE SECTIONS (core) ---
+    // --- SINGLE-VALUE SECTIONS ---
     const hasStaticIpVal = normalizeFieldValue(findFieldByLabel(fields, 'Has Static IP?'));
     const hasStatic = isYes(hasStaticIpVal);
 
@@ -384,36 +408,6 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
             imageLabel: 'Upload a picture of the Access Point',
         },
         {
-            sectionTitle: 'IP Phones',
-            sectionSubtitle: 'VoIP endpoints',
-            gateLabel: 'Does the Office have IP Phones?',
-            repeatLabel: 'Is there another IP Phone?',
-            deviceTitleSingular: 'IP Phone',
-            tableLabels: ['Brand', 'Model', 'IP Type', 'IP Address', 'Location'],
-            imageLabel: 'Upload a picture of the IP Phone',
-        },
-        {
-            sectionTitle: 'Work Stations (Computers)',
-            sectionSubtitle: 'Endpoints used by staff',
-            gateLabel: 'Does the Office have Work Stations (Computers)?',
-            repeatLabel: 'Is there another Work Station?',
-            deviceTitleSingular: 'Work Station',
-            nameLabel: 'Station Name',
-            tableLabels: [
-                'Brand',
-                'Model',
-                'Form Factor',
-                'IP Type',
-                'IP Address',
-                'Tag Number',
-                'Serial Number',
-                'MAC Address',
-                'Operative System (OS)',
-                'Location'
-            ],
-            imageLabel: 'Upload a picture of the Station',
-        },
-        {
             sectionTitle: 'Network Switches',
             sectionSubtitle: 'Switching infrastructure',
             gateLabel: 'Does the Office have Network Switches?',
@@ -421,6 +415,15 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
             deviceTitleSingular: 'Network Switch',
             tableLabels: ['Brand', 'Model', 'Managed Switch?', 'Amount of Ports', 'Location'],
             imageLabel: 'Upload a picture of the Network Switch',
+        },
+        {
+            sectionTitle: 'CCTV Systems',
+            sectionSubtitle: 'Security camera systems',
+            gateLabel: 'Does the Office have CCTV Systems?',
+            repeatLabel: 'Is there another CCTV System?',
+            deviceTitleSingular: 'CCTV System',
+            tableLabels: ['Type', 'Brand', 'Model', 'Amount of Cameras', 'Location'],
+            imageLabel: 'Upload a picture of the CCTV System',
         },
         {
             sectionTitle: 'Printers',
@@ -452,6 +455,36 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
             imageLabel: 'Upload a picture of the Scanner',
         },
         {
+            sectionTitle: 'IP Phones',
+            sectionSubtitle: 'VoIP endpoints',
+            gateLabel: 'Does the Office have IP Phones?',
+            repeatLabel: 'Is there another IP Phone?',
+            deviceTitleSingular: 'IP Phone',
+            tableLabels: ['Brand', 'Model', 'MAC Address', 'IP Type', 'IP Address', 'Location'],
+            imageLabel: 'Upload a picture of the IP Phone',
+        },
+        {
+            sectionTitle: 'Work Stations (Computers)',
+            sectionSubtitle: 'Endpoints used by staff',
+            gateLabel: 'Does the Office have Work Stations (Computers)?',
+            repeatLabel: 'Is there another Work Station?',
+            deviceTitleSingular: 'Work Station',
+            nameLabel: 'Station Name',
+            tableLabels: [
+                'Brand',
+                'Model',
+                'Form Factor',
+                'IP Type',
+                'IP Address',
+                'Tag Number',
+                'Serial Number',
+                'MAC Address',
+                'Operative System (OS)',
+                'Location'
+            ],
+            imageLabel: 'Upload a picture of the Station',
+        },
+        {
             sectionTitle: 'NAS Stations',
             sectionSubtitle: 'Network-attached storage devices',
             gateLabel: 'Does the Office have NAS Stations?',
@@ -469,15 +502,7 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
             tableLabels: ['Brand', 'Model', 'IP Type', 'IP Address', 'Location'],
             imageLabel: 'Upload a picture of the Payment Terminal',
         },
-        {
-            sectionTitle: 'CCTV Systems',
-            sectionSubtitle: 'Security camera systems',
-            gateLabel: 'Does the Office have CCTV Systems?',
-            repeatLabel: 'Is there another CCTV System?',
-            deviceTitleSingular: 'CCTV System',
-            tableLabels: ['Type', 'Brand', 'Model', 'Amount of Cameras', 'Location'],
-            imageLabel: 'Upload a picture of the CCTV System',
-        },
+
         {
             sectionTitle: 'Dental Management Software',
             sectionSubtitle: 'Practice management applications',
@@ -496,24 +521,41 @@ function buildAssessmentHtml_Full({ title, fields, createdAt, responseId }) {
             tableLabels: ['Name', 'Server Name', 'IP Type', 'IP Address'],
             imageLabel: null,
         },
+        {
+            sectionTitle: 'Intraoral Sensors',
+            senctionSubtitle: "Practice's Intraoral Sensors Setup",
+            gateLabel: 'Does the Office have Intraoral Sensors?',
+            repeatLabel: 'Is There Another Intraoral Sensor?',
+            deviceTitleSingular: 'Intraoral Sensor',
+            tableLabels: ['Brand', 'Model', 'Serial Number'],
+            imageLabel: 'Upload a picture of the Intraoral Sensor'
+        },
+        {
+            sectionTitle: 'Panoramic',
+            sectionSubtitle: 'Dental X-Ray Device',
+            gateLabel: 'Does the Office have Panoramic?',
+            repeatLabel: 'Is There Another Panoramic?',
+            deviceTitleSingular: 'Panoramic',
+            tableLabels: ['Brand', 'Model', 'Serial Number', 'IP Type', 'IP Address', 'Is Network Deployed?', 'Brand', 'Model', 'IP Type', 'IP Address'],
+            imageLabel: null
+        }
     ];
 
+    // We will insert panoramics right after Imaging Software section is pushed.
     for (const cfg of deviceConfigs) {
         const groups = extractRepeatedGroups(fields, cfg);
-        if (!groups.length) continue;
+        if (groups.length) {
+            const cardsHtml = groups.map(g => deviceCardHtml(g.deviceTitle, g.rows, g.imagesHtml)).join('');
+            parts.push(sectionCard(String(n++), cfg.sectionTitle, cfg.sectionSubtitle || '', cardsHtml));
+        }
 
-        const cardsHtml = groups
-            .map(g => deviceCardHtml(g.deviceTitle, g.rows, g.imagesHtml))
-            .join('');
-
-        parts.push(
-            sectionCard(
-                String(n++),
-                cfg.sectionTitle,
-                cfg.sectionSubtitle || '',
-                cardsHtml
-            )
-        );
+        // ✅ Insert Panoramics immediately after Imaging Software section
+        if (cfg.sectionTitle === 'Imaging Software') {
+            const panoInner = buildPanoramicsInnerHtml(fields);
+            if (panoInner) {
+                parts.push(sectionCard(String(n++), 'Panoramics', 'Site panoramic images', panoInner));
+            }
+        }
     }
 
     return wrapper(parts.join(''));
